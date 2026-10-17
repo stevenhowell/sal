@@ -1,0 +1,30 @@
+{
+  "about": "Entries added by the SAL team on 2026-10-17, each read from the organization's own page that day. Same shape as oc-resources.seed.json.",
+  "resources": [
+    {
+      "id": "national-domestic-violence-hotline",
+      "name": "National Domestic Violence Hotline",
+      "organization": "The National Domestic Violence Hotline",
+      "category": "safety",
+      "tags": ["domestic-violence", "24-7", "hotline", "text-line", "spanish"],
+      "description": "Confidential 24/7 hotline with live advocates by phone, chat and text.",
+      "services": ["Call a live advocate", "Chat with a live advocate", "Text START to 88788"],
+      "eligibility": null,
+      "population": ["anyone"],
+      "how_to_access": "phone",
+      "referral_required": false,
+      "phone": "1.800.799.SAFE (7233)",
+      "address": null,
+      "city": null,
+      "hours": "24/7",
+      "languages": ["English", "Spanish"],
+      "cost": null,
+      "website": "https://www.thehotline.org/",
+      "source_url": "https://www.thehotline.org/",
+      "source_quote": "Confidential. 24/7. We’re Here to Help I Need Some Local Resources",
+      "verified_date": "2026-10-17",
+      "confidence": "high",
+      "notes": "The home page also says: Text \"START\" to 88788. It warns that internet use can be monitored and asks visitors to clear their browser history."
+    }
+  ]
+}

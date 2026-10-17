@@ -1,0 +1,16 @@
+{
+  "name": "sal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8820",
+    "deploy": "wrangler deploy",
+    "exam": "node eval/run.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

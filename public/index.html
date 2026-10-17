@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAL</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7;
+    --accent: #0071e3; --on-accent: #fff; --sal: #e8f0fe; --client: #f0f0f2;
+    --fits: #1e7a3c; --fits-bg: #e3f4e8; --no: #b3261e; --no-bg: #fbe6e4; --unk: #8a5a00; --unk-bg: #fff2d6;
+    --alert-bg: #fbe6e4; --alert-edge: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a;
+    --accent: #0a84ff; --sal: #1a2a44; --client: #2c2c2e;
+    --fits: #63d68a; --fits-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --unk: #f5c451; --unk-bg: #33280b;
+    --alert-bg: #3a1513; --alert-edge: #ff8a80; } }
+  :root[data-theme="dark"] {
+    --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a;
+    --accent: #0a84ff; --sal: #1a2a44; --client: #2c2c2e;
+    --fits: #63d68a; --fits-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --unk: #f5c451; --unk-bg: #33280b;
+    --alert-bg: #3a1513; --alert-edge: #ff8a80; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 14px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: 0.02em; }
+  .tag { color: var(--muted); }
+  .grow { flex: 1; }
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+  .seg button { min-height: 38px; min-width: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  button.btn { min-height: 44px; min-width: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  button:active { opacity: .7; } button:disabled { opacity: .4; cursor: default; }
+  .notice { background: var(--unk-bg); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
+  .alert { background: var(--alert-bg); border: 2px solid var(--alert-edge); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { font-size: 15px; margin: 0 0 10px; }
+  #chat { min-height: 300px; max-height: 56vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .msg { padding: 10px 12px; border-radius: 12px; max-width: 88%; }
+  .msg.sal { background: var(--sal); }
+  .msg.client { background: var(--client); align-self: flex-end; }
+  .msg .who { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .empty { color: var(--muted); margin: 0; }
+  .composer { display: flex; gap: 8px; margin-top: 12px; }
+  .composer input { flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font: inherit; color: var(--text); background: var(--bg); }
+  #talk.listening { background: var(--no); border-color: var(--no); color: #fff; }
+  .status { color: var(--muted); font-size: 13px; min-height: 18px; margin-top: 6px; }
+  dl { margin: 0; display: grid; grid-template-columns: 130px 1fr; gap: 6px 10px; }
+  dt { color: var(--muted); font-size: 13px; } dd { margin: 0; }
+  ol, ul { margin: 0; padding-left: 20px; } li { margin: 4px 0; }
+  .say { font-size: 17px; margin: 0 0 10px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .opt { border-top: 1px solid var(--line); padding: 10px 0; }
+  .opt:first-of-type { border-top: 0; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 1px 7px; margin-right: 6px; }
+  .chip.fits { color: var(--fits); background: var(--fits-bg); }
+  .chip.does_not_fit { color: var(--no); background: var(--no-bg); }
+  .chip.unknown { color: var(--unk); background: var(--unk-bg); }
+  blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--line); color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+  h3 { font-size: 14px; margin: 14px 0 6px; }
+  @media print { header, .composer, #chatPanel, #staffPanel, .row { display: none !important; } .grid { display: block; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SAL</h1><span class="tag">Safe After Leaving</span>
+    <span class="grow"></span>
+    <div class="seg" id="langSeg" role="group" aria-label="Language">
+      <button data-lang="en" aria-pressed="true">English</button><button data-lang="es" aria-pressed="false">Español</button>
+    </div>
+    <div class="seg" id="voiceSeg" role="group" aria-label="Voice">
+      <button data-voice="grok" aria-pressed="true" title="Grok's Lumen voice reads Sal's words">Lumen</button>
+      <button data-voice="browser" aria-pressed="false" title="The browser's built-in voice">Browser</button>
+      <button data-voice="off" aria-pressed="false">Silent</button>
+    </div>
+    <button class="btn primary" id="start">Start</button>
+  </header>
+
+  <div class="notice" id="keyNotice" hidden></div>
+  <div class="alert" id="alert" hidden></div>
+
+  <div class="grid">
+    <div>
+      <section class="panel" id="chatPanel">
+        <h2>Conversation</h2>
+        <div id="chat"><p class="empty">Press Start, then talk or type. Every client in this demo is made up.</p></div>
+        <div class="composer">
+          <button class="btn" id="talk" disabled title="Speak your answer">Talk</button>
+          <input id="text" placeholder="Or type an answer" disabled autocomplete="off">
+          <button class="btn" id="send" disabled>Send</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+      <section class="panel" id="staffPanel" hidden>
+        <h2>Staff view</h2>
+        <div id="staff"></div>
+      </section>
+    </div>
+    <div>
+      <section class="panel">
+        <h2>Who the client is</h2>
+        <dl id="card"><p class="empty">Fills in as the client talks.</p></dl>
+      </section>
+      <section class="panel" id="planPanel" hidden>
+        <h2>Today</h2>
+        <div id="plan"></div>
+        <div class="row">
+          <button class="btn" id="readPlan">Read aloud</button>
+          <button class="btn" id="copyPlan">Copy</button>
+          <button class="btn" id="printPlan">Print</button>
+        </div>
+        <div class="status" id="planStatus"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const S = { lang: "en", voice: "grok", history: [], card: {}, busy: false, stopped: false, plan: null, keys: {} };
+const LABELS = { needs: "Needs", leaving: "Leaving", getting_around: "Getting around", id_documents: "ID", last_city: "Last lived",
+  phone: "Phone", language: "Language", insurance: "Insurance", veteran: "Veteran", money: "Money", age_group: "Age",
+  household: "Household", other: "Other" };
+const VERDICT = { fits: "Fits", does_not_fit: "Doesn't fit", unknown: "Unknown" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const audio = new Audio();
+
+function setStatus(t) { $("status").textContent = t || ""; }
+function seg(id, attr, val) { document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute("aria-pressed", b.dataset[attr] === val)); }
+
+async function api(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const data = await r.json().catch(() => ({ error: `Server returned ${r.status}` }));
+  if (!r.ok) throw new Error(data.error || `Server returned ${r.status}`);
+  return data;
+}
+
+function renderChat() {
+  const c = $("chat");
+  c.innerHTML = S.history.length ? "" : `<p class="empty">Press Start, then talk or type. Every client in this demo is made up.</p>`;
+  for (const h of S.history) {
+    const d = document.createElement("div");
+    d.className = "msg " + h.who;
+    d.innerHTML = `<span class="who">${h.who === "sal" ? "Sal" : "Client"}</span>${esc(h.text)}`;
+    c.appendChild(d);
+  }
+  c.scrollTop = c.scrollHeight;
+}
+
+function renderCard() {
+  const keys = Object.keys(S.card);
+  $("card").innerHTML = keys.length ? keys.map(k => `<dt>${esc(LABELS[k] || k)}</dt><dd>${esc(S.card[k])}</dd>`).join("") : `<p class="empty">Fills in as the client talks.</p>`;
+}
+
+function setInputs(on) {
+  const can = on && !S.stopped && !S.busy;
+  $("talk").disabled = !can || !Recognition;
+  $("text").disabled = !can; $("send").disabled = !can;
+  if (!Recognition) $("talk").title = "Speech input needs Chrome or Safari";
+}
+
+// ---- voice out ----
+async function say(text) {
+  audio.pause(); speechSynthesis.cancel();
+  if (S.voice === "off" || !text) return;
+  if (S.voice === "grok" && S.keys.grok) {
+    try {
+      const r = await fetch("/api/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang: S.lang }) });
+      if (!r.ok) throw new Error((await r.json()).error);
+      audio.src = URL.createObjectURL(await r.blob());
+      await audio.play();
+      return;
+    } catch (e) { setStatus("Lumen voice unavailable (" + e.message + "). Using the browser voice."); }
+  }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = S.lang === "es" ? "es-MX" : "en-US";
+  speechSynthesis.speak(u);
+}
+
+// ---- voice in ----
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function listen() {
+  if (rec) { rec.stop(); return; }
+  audio.pause(); speechSynthesis.cancel();
+  rec = new Recognition();
+  rec.lang = S.lang === "es" ? "es-MX" : "en-US";
+  rec.interimResults = true;
+  let finalText = "";
+  rec.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalText += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
+    }
+    $("text").value = (finalText + " " + interim).trim();
+  };
+  rec.onerror = e => setStatus(e.error === "not-allowed" ? "Microphone blocked. Allow it in the browser, or type instead." : "Didn't catch that (" + e.error + "). Try again or type.");
+  rec.onend = () => { rec = null; $("talk").classList.remove("listening"); $("talk").textContent = "Talk"; if ($("text").value.trim()) send(); };
+  rec.start();
+  $("talk").classList.add("listening"); $("talk").textContent = "Done";
+  setStatus("Listening…");
+}
+
+// ---- conversation ----
+async function start() {
+  audio.pause(); speechSynthesis.cancel();
+  Object.assign(S, { history: [], card: {}, stopped: false, plan: null });
+  $("alert").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true;
+  renderCard(); $("start").textContent = "Start over";
+  await step();
+}
+
+async function send() {
+  const t = $("text").value.trim();
+  if (!t || S.busy || S.stopped) return;
+  $("text").value = "";
+  S.history.push({ who: "client", text: t });
+  renderChat();
+  await step();
+}
+
+async function step() {
+  S.busy = true; setInputs(false); setStatus("Sal is thinking…");
+  try {
+    const r = await api("/api/turn", { history: S.history, lang: S.lang });
+    for (const u of r.card_updates || []) S.card[u.field] = u.value;
+    S.history.push({ who: "sal", text: r.reply });
+    renderChat(); renderCard(); setStatus("");
+    if (r.safety) {
+      $("alert").textContent = r.safety.alert; $("alert").hidden = false;
+      if (r.safety.stop) { S.stopped = true; S.history = S.history.slice(-2); renderChat(); S.card = {}; renderCard(); }
+    }
+    say(r.reply);
+    if (r.ready_for_plan) await makePlan();
+  } catch (e) { setStatus(e.message); }
+  S.busy = false; setInputs(true);
+}
+
+async function makePlan() {
+  setStatus("Finding the next step on the checked list…");
+  const transcript = S.history.map(h => (h.who === "sal" ? "Sal: " : "Client: ") + h.text).join("\n");
+  const p = await api("/api/plan", { card: S.card, transcript, lang: S.lang });
+  S.plan = p; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
+  audio.onended = null;
+  setTimeout(() => say(p.client_message), S.voice === "off" ? 0 : 400);
+}
+
+function renderPlan() {
+  const p = S.plan;
+  $("plan").innerHTML = `
+    <p class="say">${esc(p.client_message)}</p>
+    ${p.today_steps.length ? `<ol>${p.today_steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+    ${p.bring.length ? `<h3>${S.lang === "es" ? "Qué llevar" : "What to bring"}</h3><ul>${p.bring.map(s => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+    <p class="meta">${p.reading_grade != null ? `Reading level: grade ${p.reading_grade}. ` : ""}Draft only. Nothing is sent.</p>`;
+  $("planPanel").hidden = false;
+
+  const c = p.check;
+  const issues = c.dropped.length + c.removed_digits.length + c.missing_placeholders.length;
+  $("staff").innerHTML = `
+    <p class="meta">${issues ? `The checker caught ${issues} problem${issues > 1 ? "s" : ""} before the client saw them (below).` : "The checker found no problems: every quote matched its entry and every fact came from the list."}</p>
+    ${p.needs.map(n => `<h3>${esc(n.need)}</h3>${n.options.length ? n.options.map(o => `
+      <div class="opt"><span class="chip ${o.verdict}">${VERDICT[o.verdict]}</span><strong>${esc(o.entry.name)}</strong>
+        <div>${esc(o.reason)}</div><blockquote>“${esc(o.quote)}”</blockquote>
+        <div class="meta">${o.entry.phone ? esc(o.entry.phone) + " · " : ""}${o.entry.referral_required ? "Referral only · " : ""}checked ${esc(o.entry.verified_date)} · ${esc(o.entry.confidence)} confidence${o.entry.confidence !== "high" ? " · call first" : ""} · <a href="${esc(o.entry.source_url)}" target="_blank" rel="noopener">source</a></div>
+      </div>`).join("") : `<p class="empty">Nothing on the checked list fits this need.</p>`}`).join("")}
+    ${p.unknowns.length ? `<h3>Staff need to check</h3><ul>${p.unknowns.map(u => `<li>${esc(u)}</li>`).join("")}</ul>` : ""}
+    ${p.ask_staff.length ? `<h3>Questions for IHH staff</h3><ul>${p.ask_staff.map(u => `<li>${esc(u)}</li>`).join("")}</ul>` : ""}
+    ${c.dropped.length ? `<h3>Thrown out by the checker</h3><ul>${c.dropped.map(d => `<li>${esc(d.entry_id)}: ${esc(d.why)}</li>`).join("")}</ul>` : ""}
+    ${c.removed_digits.length ? `<h3>Numbers Claude wrote itself (removed)</h3><p>${c.removed_digits.map(esc).join(", ")}</p>` : ""}
+    ${c.missing_placeholders.length ? `<h3>Facts not on the list (replaced)</h3><p>${c.missing_placeholders.map(esc).join(", ")}</p>` : ""}`;
+  $("staffPanel").hidden = false;
+}
+
+// ---- controls ----
+$("start").onclick = start;
+$("send").onclick = send;
+$("text").onkeydown = e => { if (e.key === "Enter") send(); };
+$("talk").onclick = listen;
+$("readPlan").onclick = () => S.plan && say(S.plan.client_message);
+$("printPlan").onclick = () => window.print();
+$("copyPlan").onclick = async () => {
+  const p = S.plan; if (!p) return;
+  const text = [p.client_message, ...p.today_steps.map((s, i) => `${i + 1}. ${s}`)].join("\n");
+  try { await navigator.clipboard.writeText(text); $("planStatus").textContent = "Copied."; }
+  catch { $("planStatus").textContent = "Couldn't copy. Select the text and copy it instead."; }
+};
+document.querySelectorAll("#langSeg button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; seg("langSeg", "lang", S.lang); document.documentElement.lang = S.lang; });
+document.querySelectorAll("#voiceSeg button").forEach(b => b.onclick = () => { S.voice = b.dataset.voice; seg("voiceSeg", "voice", S.voice); if (S.voice === "off") { audio.pause(); speechSynthesis.cancel(); } });
+
+fetch("/api/status").then(r => r.json()).then(k => {
+  S.keys = k;
+  const missing = [!k.claude && "Claude (ANTHROPIC_API_KEY)", !k.grok && "Grok voice (XAI_API_KEY)"].filter(Boolean);
+  if (missing.length) { $("keyNotice").textContent = `Missing in .dev.vars: ${missing.join(" and ")}. ${!k.claude ? "Sal can't think without the Claude key." : "Sal will use the browser voice."}`; $("keyNotice").hidden = false; }
+  if (!k.grok) { S.voice = "browser"; seg("voiceSeg", "voice", "browser"); }
+  $("start").disabled = !k.claude;
+}).catch(() => setStatus("Can't reach the SAL server."));
+</script>
+</body>
+</html>
