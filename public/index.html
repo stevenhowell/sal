@@ -81,18 +81,30 @@
   @media (max-width: 820px) { .facts { grid-template-columns: 1fr; } }
   .fact { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; }
   .fact .big { font-size: clamp(56px, 7vw, 92px); } .fact p { font: 600 20px/1.3 var(--display); margin: 12px 0 10px; } .fact small { color: var(--mute); font-size: 14px; }
-  /* ---- Scroll track: the pin stays on screen while the track scrolls past ---- */
+  /* ---- Home: intro screen, then a pinned full-screen stage played by scroll ---- */
   #home { scroll-snap-type: none; }
-  .track { height: 360vh; position: relative; }
-  .pin { position: sticky; top: 0; height: calc(100vh - var(--barH)); display: grid; align-content: center; padding: 24px var(--gutter); }
-  .bar { height: 3px; border-radius: 2px; background: var(--line); margin: 14px auto 0; width: 180px; overflow: hidden; }
+  .intro { position: relative; }
+  .track { height: 420vh; position: relative; }
+  .pin { position: sticky; top: 0; height: calc(100vh - var(--barH)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 18px var(--gutter); }
+  .scene-title { font: 700 clamp(30px, 4.6vw, 60px)/1.05 var(--display); text-align: center; letter-spacing: -.01em; min-height: 1.1em; }
+  .scene-title span { color: var(--sun); }
+  #home .stage { width: min(1180px, 100%); }
+  #home .scenes { height: min(68vh, 760px); border-radius: 34px; }
+  #home .s-call { scale: var(--kc, 1.4); } #home .s-search { scale: var(--ks, 1.6); } #home .s-packet { scale: var(--kp, 1.5); }
+  .pin-text { display: grid; gap: 18px; justify-items: center; }
+  @media (min-width: 1000px) {
+    .pin { display: grid; grid-template-columns: minmax(300px, .85fr) 1.4fr; align-items: center; gap: clamp(24px, 4vw, 64px); max-width: 1500px; margin: 0 auto; }
+    .pin-text { justify-items: start; }
+    .scene-title { text-align: left; font-size: clamp(40px, 4.4vw, 72px); }
+    #home .scenes { height: calc(100vh - var(--barH) - 96px); }
+  }
+  #home .steps3 { font-size: 22px; gap: 40px; margin-top: 14px; }
+  .bar { height: 4px; border-radius: 2px; background: var(--line); width: min(320px, 70%); overflow: hidden; }
   .bar i { display: block; height: 100%; width: 0; background: var(--sun); }
   .hint { transition: opacity .3s; }
   @media (max-width: 820px) {
-    .pin { align-content: start; padding-top: 18px; }
-    .letters { font-size: 84px; } .expand { font-size: 18px; } .lead { font-size: 18px; margin-top: 8px; } .btnrow { margin-top: 14px; }
-    .btn { min-height: 44px; } .scenes { height: 360px; } .phone { transform: scale(.84); }
-    .sheet { transform-origin: center; scale: .88; } .hint { display: none; }
+    .hero .mark { width: 120px; justify-self: start; order: -1; }
+    #home .scenes { height: min(58vh, 520px); } #home .steps3 { font-size: 18px; gap: 24px; }
   }
   /* ---- Home stage: call → search → packet ---- */
   .stage { margin: 0; justify-self: center; width: min(420px, 100%); }
@@ -185,14 +197,18 @@
 
 <!-- HOME -->
 <main class="panel" id="home" role="tabpanel" aria-labelledby="tab-home">
-  <section class="track"><div class="pin"><div class="wrap hero">
+  <section class="slide intro"><div class="wrap hero">
     <div>
       <h1 class="letters" aria-label="SAL"><span>S</span><span>A</span><span>L</span></h1>
       <div class="expand"><span><b>S</b>afe</span><span><b>A</b>fter</span><span><b>L</b>eaving</span></div>
       <p class="lead">Call Sal. Leave with a plan.</p>
       <div class="btnrow"><button class="btn primary" data-go="demo">See the demo</button><a class="btn" href="/app">Open SAL</a></div>
     </div>
+    <img class="mark" src="/brand/sal-mark.svg" alt="">
+  </div><div class="hint" id="hint">Scroll ↓</div></section>
 
+  <section class="track" id="track"><div class="pin">
+    <div class="pin-text"><h2 class="scene-title" id="sceneTitle">Call Sal.</h2><div class="bar"><i id="prog"></i></div></div>
     <figure class="stage" id="stage" aria-label="A client calls Sal, Sal searches 41 programs, and a discharge packet is made.">
       <div class="scenes">
         <!-- 1 · Call -->
@@ -229,9 +245,8 @@
         </div>
       </div>
       <figcaption class="steps3"><span data-i="0">Call</span><span data-i="1">Search</span><span data-i="2">Packet</span></figcaption>
-      <div class="bar"><i id="prog"></i></div>
     </figure>
-  </div><div class="hint" id="hint">Scroll</div></div></section>
+  </div></section>
 </main>
 
 <!-- DEMO -->
@@ -291,40 +306,48 @@ addEventListener("touchend", e => {
 show(location.hash.slice(1) || "home", false);
 
 // ---- Home stage, driven by scroll: call → search → packet ----
-// Each scene's CSS animations are paused and moved to the moment that matches the scroll position,
-// so scrolling down plays the story and scrolling up rewinds it.
+// The intro scrolls away, then the stage pins. Each scene's CSS animations are paused and moved to the
+// moment that matches the scroll position, so scrolling down plays the story and scrolling up rewinds it.
 (() => {
-  const home = document.getElementById("home");
+  const home = document.getElementById("home"), track = document.getElementById("track"), box = document.querySelector("#home .scenes");
   const scenes = [...document.querySelectorAll("#stage .scene")], caps = [...document.querySelectorAll("#stage .steps3 span")];
-  const prog = document.getElementById("prog"), hint = document.getElementById("hint");
+  const prog = document.getElementById("prog"), hint = document.getElementById("hint"), title = document.getElementById("sceneTitle");
   const cnt = document.getElementById("cnt"), lbl = document.getElementById("cntLbl");
-  const lengths = [4300, 3000, 4200];   // how much of each scene's animation the scroll covers (ms)
+  const titles = ["Call <span>Sal</span>.", "Sal checks <span>41</span> programs.", "A packet to <span>take home</span>."];
+  const lengths = [4300, 3000, 4100];   // how much of each scene's animation the scroll covers (ms)
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let current = -1;
+  // Each scene is drawn at a fixed size; zoom it to fill the stage (the phone is tallest, the search smallest).
+  function fit() {
+    const h = box.clientHeight, w = box.clientWidth, z = (base, wide) => Math.max(0.75, Math.min(2.4, h / base, w / wide)).toFixed(2);
+    box.style.setProperty("--kc", z(450, 300)); box.style.setProperty("--ks", z(330, 380)); box.style.setProperty("--kp", z(410, 340));
+  }
   function enter(n) {
     scenes.forEach(sc => sc.classList.remove("on")); void scenes[n].offsetWidth;
     scenes[n].classList.add("on"); current = n;
     caps.forEach((c, k) => c.classList.toggle("on", k === n));
-    scenes[n].getAnimations({ subtree: true }).forEach(an => an.pause());
+    title.innerHTML = titles[n];
+    if (scenes[n].getAnimations) scenes[n].getAnimations({ subtree: true }).forEach(an => an.pause());
   }
   function update() {
-    const max = home.scrollHeight - home.clientHeight;
-    const p = max > 0 ? Math.min(1, Math.max(0, home.scrollTop / max)) : 0;
+    const range = track.offsetHeight - home.clientHeight;
+    const p = range > 0 ? Math.min(1, Math.max(0, (home.scrollTop - track.offsetTop) / range)) : 0;
     const n = Math.min(2, Math.floor(p * 3));
     if (n !== current) enter(n);
-    const local = Math.min(1, Math.max(0, p * 3 - n));
-    const t = local * lengths[n];
-    scenes[n].getAnimations({ subtree: true }).forEach(an => { an.currentTime = an.effect?.getTiming().iterations === Infinity && t > 1800 ? 1800 + ((t - 1800) % 1800) : t; });
+    const t = Math.min(1, Math.max(0, p * 3 - n) / 0.8) * lengths[n];   // each scene finishes at 80% of its stretch, then holds
+    if (scenes[n].getAnimations) scenes[n].getAnimations({ subtree: true }).forEach(an => {
+      an.currentTime = an.effect && an.effect.getTiming().iterations === Infinity && t > 1800 ? 1800 + ((t - 1800) % 1800) : t;
+    });
     if (n === 1) { const k = Math.min(1, Math.max(0, (t - 600) / 1800)); const v = Math.round(41 - 38 * (1 - Math.pow(1 - k, 3))); cnt.textContent = v; lbl.textContent = v > 3 ? "programs checked" : "good matches"; }
     prog.style.width = (p * 100).toFixed(1) + "%";
-    hint.style.opacity = p > 0.02 ? 0 : 1;
+    hint.style.opacity = home.scrollTop > 20 ? 0 : 1;
   }
-  if (reduce) { enter(2); scenes[2].getAnimations({ subtree: true }).forEach(an => an.finish()); prog.style.width = "100%"; return; }
+  fit(); addEventListener("resize", () => { fit(); update(); });
+  if (reduce) { enter(2); scenes[2].getAnimations?.({ subtree: true }).forEach(an => an.finish()); prog.style.width = "100%"; return; }
   home.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
-  addEventListener("resize", update);
   update();
   // Clicking Call, Search or Packet scrolls to that part of the story.
-  caps.forEach((c, k) => { c.style.cursor = "pointer"; c.onclick = () => { const max = home.scrollHeight - home.clientHeight; home.scrollTo({ top: max * (k / 3 + 0.3), behavior: "smooth" }); }; });
+  caps.forEach((c, k) => { c.style.cursor = "pointer"; c.onclick = () => { const range = track.offsetHeight - home.clientHeight; home.scrollTo({ top: track.offsetTop + range * (k / 3 + 0.3), behavior: "smooth" }); }; });
 })();
 
 </script>
