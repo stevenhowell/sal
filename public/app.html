@@ -150,7 +150,7 @@
       </section>
       <section class="panel" id="staffPanel" hidden>
         <h2>Staff view</h2>
-        <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn primary" id="openPacket">Discharge packet</button></div>
+        <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn primary" id="openPacket">Discharge packet</button><button class="btn" id="printPacket">Print packet</button></div>
         <div id="staff"></div>
       </section>
     </div>
@@ -397,6 +397,7 @@ function renderPlan() {
 // ---- discharge packet: opens in a new window, which asks for the plan when it's ready ----
 let packetWin = null;
 $("openPacket").onclick = () => { packetWin = window.open("/packet.html", "sal-packet"); };
+$("printPacket").onclick = () => { packetWin = window.open("/packet.html?print=1", "sal-packet"); };
 window.addEventListener("message", e => {
   if (e.origin === location.origin && e.data?.type === "packet-ready" && e.source === packetWin && S.plan)
     packetWin.postMessage({ type: "packet", plan: S.plan, card: S.card, lang: S.lang }, location.origin);

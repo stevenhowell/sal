@@ -55,6 +55,7 @@
   <strong>Discharge packet</strong><span class="meta" id="barMeta"></span>
   <span class="grow"></span>
   <label class="check"><input type="checkbox" id="reviewed"> Reviewed by case manager</label>
+  <button class="btn" id="print">Print</button>
   <button class="btn primary" id="pdf">Save as PDF</button>
 </div>
 <div id="out"><p class="empty">Waiting for the plan from SAL…</p></div>
@@ -66,6 +67,7 @@ const T = {
 };
 const fmtDate = (d, lang) => new Date(d + "T12:00:00").toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { year: "numeric", month: "long", day: "numeric" });
 
+const AUTO_PRINT = new URLSearchParams(location.search).get("print") === "1";
 function render({ plan, lang }) {
   const t = T[lang === "es" ? "es" : "en"];
   document.documentElement.lang = lang;
@@ -105,10 +107,13 @@ function render({ plan, lang }) {
       <div class="sign"><div>${t.by}</div><div>${t.date}</div></div>
       ${foot(n)}</section>`);
   document.getElementById("out").innerHTML = pages.join("");
+  // Opened with "Print packet": show the print dialog once the pages are drawn (fonts and layout settle first).
+  if (AUTO_PRINT && !render.printed) { render.printed = true; setTimeout(() => window.print(), 400); }
 }
 
 document.getElementById("reviewed").onchange = e => document.body.classList.toggle("reviewed", e.target.checked);
 document.getElementById("pdf").onclick = () => window.print();
+document.getElementById("print").onclick = () => window.print();
 window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "packet") render(e.data); });
 if (window.opener) window.opener.postMessage({ type: "packet-ready" }, location.origin);
 // packet.html#sample=C01 builds a packet for one of the exam's made-up clients (for checking the layout).
