@@ -463,7 +463,19 @@ function maybeListen(session) {
   if (session !== S.session || S.stopped || S.plan || S.busy) return;
   listen();
 }
-$("callBtn").onclick = () => startCall(false);
+// Safari only lets a page play sound that starts inside a click. Play a silent clip on the first click
+// (and wake the speech engine) so Sal's replies, which arrive seconds later, are allowed to play.
+const SILENT = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBqpAAAAAAAAAAAAAAAAAAAA//tAxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABhgC7u7u7u7u7u7u7";
+let unlocked = false;
+function unlockAudio() {
+  if (unlocked) return; unlocked = true;
+  try { audio.src = SILENT; audio.play().catch(() => {}); } catch {}
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch {}
+  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch {}
+}
+addEventListener("pointerdown", unlockAudio, { capture: true });
+addEventListener("keydown", unlockAudio, { capture: true });
+$("callBtn").onclick = () => { unlockAudio(); startCall(false); };
 $("hangBtn").onclick = () => hangUp(true);
 $("muteBtn").onclick = () => { S.call.muted = !S.call.muted; if (S.call.muted && rec) rec.abort?.(); callUI(); tick(); if (!S.call.muted) maybeListen(S.session); };
 

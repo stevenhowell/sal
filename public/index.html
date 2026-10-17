@@ -7,7 +7,9 @@
 <meta name="description" content="SAL (Safe After Leaving): call Sal, leave recuperative care with a plan. Built for Illumination Health + Home at the Claude Impact Lab, October 17, 2026.">
 <link rel="icon" href="/brand/sal-mark.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Fonts load without blocking the page: Safari waits on a slow font stylesheet before drawing anything. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Figtree:wght@400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Figtree:wght@400;500;600&display=swap"></noscript>
 <style>
   :root {
     --bg: #0b2226; --bg2: #0f2b30; --card: #12343a; --card2: #173f46; --line: #24525a;
@@ -19,7 +21,7 @@
   html, body { height: 100%; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.5 var(--body); overflow: hidden; -webkit-font-smoothing: antialiased; }
   a { color: var(--teal); }
-  #top { position: fixed; inset: 0 0 auto 0; height: var(--barH); display: flex; align-items: center; gap: 14px; padding: 0 var(--gutter); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); z-index: 5; }
+  #top { position: fixed; inset: 0 0 auto 0; height: var(--barH); display: flex; align-items: center; gap: 14px; padding: 0 var(--gutter); background: rgba(11, 34, 38, .9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); z-index: 5; }
   .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font: 700 22px var(--display); letter-spacing: .04em; }
   .brand img { width: 34px; height: 34px; }
   .grow { flex: 1; }

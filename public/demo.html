@@ -59,7 +59,7 @@ document.querySelectorAll("#voice button").forEach(b => b.onclick = () => {
   voice = b.dataset.v; client.postMessage({ type: "voice", voice }, location.origin);
   document.querySelectorAll("#voice button").forEach(x => x.setAttribute("aria-pressed", x === b));
 });
-document.getElementById("play").onclick = () => { client.postMessage({ type: "voice", voice }, location.origin); client.postMessage({ type: "autoplay", scenario: sc, lang }, location.origin); };
+document.getElementById("play").onclick = () => { try { document.getElementById("client").contentWindow.unlockAudio?.(); } catch {} client.postMessage({ type: "voice", voice }, location.origin); client.postMessage({ type: "autoplay", scenario: sc, lang }, location.origin); };
 document.getElementById("skip").onclick = () => client.postMessage({ type: "skip", scenario: sc }, location.origin);
 document.getElementById("stop").onclick = () => client.postMessage({ type: "stop" }, location.origin);
 </script>
