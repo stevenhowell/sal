@@ -41,6 +41,7 @@
   </div>
   <button class="btn primary" id="play">Play</button>
   <button class="btn" id="stop">Stop</button>
+  <button class="btn" id="skip" title="Load a finished conversation recorded by the exam">Skip to end</button>
 </header>
 <main>
   <section class="pane"><h2>Client's tablet</h2><iframe id="client" src="/?view=client&embed=1" title="Client's tablet" allow="autoplay; microphone"></iframe></section>
@@ -58,6 +59,7 @@ document.querySelectorAll("#voice button").forEach(b => b.onclick = () => {
   document.querySelectorAll("#voice button").forEach(x => x.setAttribute("aria-pressed", x === b));
 });
 document.getElementById("play").onclick = () => { client.postMessage({ type: "voice", voice }, location.origin); client.postMessage({ type: "autoplay", scenario: sc, lang }, location.origin); };
+document.getElementById("skip").onclick = () => client.postMessage({ type: "skip", scenario: sc }, location.origin);
 document.getElementById("stop").onclick = () => client.postMessage({ type: "stop" }, location.origin);
 </script>
 </body>

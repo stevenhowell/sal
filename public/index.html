@@ -296,7 +296,7 @@ async function step() {
   const session = S.session;
   S.busy = true; setInputs(false); setStatus("Sal is thinking…");
   try {
-    const r = await api("/api/turn", { history: S.history, lang: S.lang, hint: S.live?.next_question || "" });
+    const r = await api("/api/turn", { history: S.history, lang: S.lang, hint: S.live?.next_question || "", card: S.card });
     if (session !== S.session) return;   // the conversation was restarted while Sal was thinking
     for (const u of r.card_updates || []) S.card[u.field] = u.value;
     S.history.push({ who: "sal", text: r.reply });
@@ -485,6 +485,27 @@ async function autoplay(scenario, lang) {
   }
   $("text").placeholder = "Or type an answer";
 }
+// ---- demo: skip to the end with a conversation the exam recorded (public/results.json) ----
+async function loadRecorded(scenario) {
+  S.auto = (S.auto || 0) + 1;
+  if (S.call?.on) hangUp(false);
+  audio.pause(); speechSynthesis.cancel(); if (rec) rec.abort?.();
+  const d = await (await fetch("/results.json", { cache: "no-store" })).json();
+  const r = d.results.find(x => x.id === scenario);
+  if (!r) { setStatus("No recorded run for this client yet."); return; }
+  Object.assign(S, { history: r.transcript, card: r.card || {}, plan: r.plan || null, live: null, searching: false, busy: false,
+    stopped: !!r.safety && r.safety !== "medical", lang: r.lang, liveRun: (S.liveRun || 0) + 1, session: (S.session || 0) + 1 });
+  seg("langSeg", "lang", S.lang);
+  $("alert").hidden = !S.stopped; if (S.stopped) $("alert").textContent = "Staff called to the room (simulated). The interview stopped and nothing is saved.";
+  $("livePanel").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true; $("textPanel").hidden = true;
+  renderChat(); renderCard();
+  if (S.plan) renderPlan();
+  $("callState").textContent = "Recorded call"; callUI();
+  setStatus(`Showing a finished conversation recorded by the exam on ${new Date(d.ran_at).toLocaleDateString()}. Press Call or Play for a live one.`);
+  setInputs(true); publish();
+}
+
+window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "skip") loadRecorded(e.data.scenario); });
 window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "autoplay") autoplay(e.data.scenario, e.data.lang); if (e.data?.type === "voice") { S.voice = e.data.voice; seg("voiceSeg", "voice", S.voice); } if (e.data?.type === "stop") { if (S.call?.on) hangUp(true); else { S.auto++; audio.pause(); speechSynthesis.cancel(); } } });
 
 if (VIEW === "staff") {

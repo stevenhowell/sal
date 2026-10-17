@@ -68,9 +68,10 @@ You get a client card and a checked list of programs. Match the client's needs O
 
 Output:
 - needs: each need from the card with its options (best first, at most 4 each).
-- today_steps: at most 3 steps for TODAY, in the client's language, plain words, under 25 words each. Start with the single most useful one. Usually "ask your case manager to ..." is the honest first step.
+- today_steps: at most 3 steps for TODAY, in the client's language, plain words, under 20 words each. Start with the single most useful one. Usually "ask your case manager to ..." is the honest first step.
 - bring: what to bring (in the client's language), only if the entries say so.
-- client_message: one short message in the client's language, under 320 characters, that could be read aloud or sent as a text by staff. Use placeholders for any facts.
+- client_message: one short message in the client's language, under 300 characters, that could be read aloud or sent as a text by staff. Use placeholders for phone numbers and hours.
+- Client-facing text (today_steps, bring, client_message) must read at about a 5th-grade level: short sentences (under 15 words), everyday words, no acronyms, no parentheses. Call programs by a short everyday name ("Coordinated Entry", "the DMV", "the VA", "211"), never their full official name, and don't use {{name:...}} there. Full names belong in the staff fields.
 - unknowns: things staff must check (English).
 - ask_staff: questions for IHH staff (English).
 

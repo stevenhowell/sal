@@ -39,7 +39,7 @@ function readJson(res) {
 // POST /api/turn  { history: [{who: "sal"|"client", text}], lang }
 async function turn(req, env) {
   const body = await req.json();
-  const history = cleanHistory(body.history), lang = clip(body.lang || "en", 5), hint = clip(body.hint, 200);
+  const history = cleanHistory(body.history), lang = clip(body.lang || "en", 5), hint = clip(body.hint, 200), card = cleanCard(body.card);
   const l = lang.startsWith("es") ? "es" : "en";
   if (!history.length) return json({ reply: GREETING[l], card_updates: [], ready_for_plan: false });
 
@@ -66,6 +66,7 @@ async function turn(req, env) {
   const answers = history.filter(h => h.who === "client").length;
   const summarized = history.some(h => h.who === "sal" && /here's what i heard|esto es lo que escuché/i.test(h.text));
   if (summarized && answers >= 2) messages.push({ role: "system", content: "Sal already read back a summary. If the client agreed (even loosely, like 'yes' or 'that's right'), set ready_for_plan to true and say you'll find their next step now. If they corrected something, record it and set ready_for_plan to true." });
+  else if (answers >= 5 && !card.phone) messages.push({ role: "system", content: "You haven't learned what kind of phone the client has. Ask that next in plain words (whether it can get texts decides if staff can text the plan), unless they already said." });
   else if (hint && answers < 7) messages.push({ role: "system", content: `The live search says this would help decide between programs: "${hint.slice(0, 200)}". Ask it next in your own plain words, unless the client already answered it or it doesn't fit the moment.` });
   else if (answers >= 7) messages.push({ role: "system", content: "You have enough. Read back the summary now, starting with \"Here's what I heard\" (Spanish: \"Esto es lo que escuché\"), and ask if it's right." });
   const t0 = Date.now();

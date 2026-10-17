@@ -52,7 +52,7 @@ async function runOne(sc) {
     history.push({ who: "sal", text: r.reply });
     history.push({ who: "client", text: sc.in_their_words });
     for (let i = 0; i < MAX_TURNS; i++) {
-      r = await post("/api/turn", { history, lang, hint });
+      r = await post("/api/turn", { history, lang, hint, card });
       history.push({ who: "sal", text: r.reply });
       for (const u of r.card_updates || []) card[u.field] = u.value;
       // Mirror the app: search the list with the profile so far and pass the deciding question to Sal.

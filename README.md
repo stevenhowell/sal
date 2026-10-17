@@ -20,7 +20,7 @@ Two screens showing one conversation:
 - **Discharge packet (PDF).** One click builds a printable packet in the client's language: today's steps, what to bring, each program with its phone, hours, how to get in and the date it was checked, a page of safety numbers read from the data, and lines for case manager notes and sign-off. It's marked DRAFT until the case manager ticks "Reviewed". [Sample packet](docs/sample-discharge-packet.pdf) for a made-up client.
 - **Text message draft.** The plan as a text, shown the way it would arrive on the client's phone, with its length. Sending is switched off: the event's rules say to draft messages, not send them.
 
-Open `/demo.html` to watch a whole interview play by itself: Claude plays a made-up client from the event's scenario file while Sal interviews them.
+Open `/demo.html` to watch a whole interview play by itself: Claude plays a made-up client from the event's scenario file while Sal interviews them. **Skip to end** loads a finished conversation the exam recorded, to go straight to the plan, text draft and packet.
 
 **Try it live:** [sal.stevenluishowell.workers.dev/demo](https://sal.stevenluishowell.workers.dev/demo) (press Play) · [exam results](https://sal.stevenluishowell.workers.dev/results)
 
