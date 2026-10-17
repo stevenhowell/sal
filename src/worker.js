@@ -45,6 +45,11 @@ async function turn(req, env) {
 
   const messages = [{ role: "user", content: "(The client has sat down. Sal greets them.)" }];
   for (const h of history) messages.push({ role: h.who === "sal" ? "assistant" : "user", content: h.text });
+  // Keep interviews short: after 6 answers, Sal reads back what it heard; once that's confirmed, it hands off.
+  const answers = history.filter(h => h.who === "client").length;
+  const summarized = history.some(h => h.who === "sal" && /here's what i heard|esto es lo que escuché/i.test(h.text));
+  if (summarized && answers >= 2) messages.push({ role: "system", content: "Sal already read back a summary. If the client agreed (even loosely, like 'yes' or 'that's right'), set ready_for_plan to true and say you'll find their next step now. If they corrected something, record it and set ready_for_plan to true." });
+  else if (answers >= 6) messages.push({ role: "system", content: "You have enough. Read back the summary now, starting with \"Here's what I heard\" (Spanish: \"Esto es lo que escuché\"), and ask if it's right." });
   const t0 = Date.now();
   const res = await claude(env).messages.create({
     model: "claude-haiku-5-5",

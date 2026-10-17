@@ -11,20 +11,25 @@ function entryText(e) {
     e.source_quote, ...(e.services || []), ...(e.population || []), ...(e.languages || [])].join(" | "));
 }
 
-// Numbers Claude may repeat: the ones the client said (in the card or transcript) and 9-1-1.
-function allowedNumbers(context) {
-  return new Set([...(String(context).match(/\d[\d,.]*/g) || []).map(n => n.replace(/[,.]$/, "")), "9-1-1", "911"]);
+// Numbers Claude may repeat: the ones the client said, 9-1-1, and numbers printed in the entries this plan cites.
+const NUM = /\d[\d,.\-]*/g;
+function allowedNumbers(context, citedEntries) {
+  const out = new Set(["9-1-1", "911"]);
+  const add = t => (String(t).match(NUM) || []).forEach(n => { n = n.replace(/[,.\-]+$/, ""); out.add(n); out.add(n.replace(/-/g, "")); });
+  add(context);
+  for (const e of citedEntries) add([e.phone, e.hours, e.eligibility, e.description, e.notes, e.cost, e.source_quote, e.name, ...(e.services || [])].join(" "));
+  return out;
 }
 
-// Removes digits Claude wrote itself. Returns the cleaned text and what was removed.
+// Removes digits Claude wrote itself, leaving {{placeholders}} untouched. Returns the cleaned text and what was removed.
 function stripDigits(text, allowed) {
   const removed = [];
-  const out = String(text).replace(/(\$?\d[\d,.\-()/ ]*\d|\$?\d)/g, m => {
-    const t = m.trim().replace(/[,.]$/, "");
-    if (allowed.has(t) || allowed.has(t.replace(/^\$/, "")) || /^(9-1-1|911)$/.test(t)) return m;
-    removed.push(t);
+  const out = String(text).split(/(\{\{\w+:[a-z0-9-]+\}\})/g).map((part, i) => i % 2 ? part : part.replace(/\$?\d[\d,.\-]*\d|\$?\d/g, m => {
+    const t = m.replace(/^\$/, "").replace(/[,.\-]+$/, "");
+    if (allowed.has(t) || allowed.has(t.replace(/-/g, ""))) return m;
+    removed.push(m);
     return "[number removed]";
-  });
+  })).join("");
   return { out, removed };
 }
 
@@ -42,7 +47,10 @@ function fill(text, byId, used, missing) {
 
 export function checkPlan(plan, resources, context) {
   const byId = new Map(resources.map(r => [r.id, r]));
-  const allowed = allowedNumbers(context);
+  const allText = JSON.stringify([plan.today_steps, plan.bring, plan.client_message]);
+  const cited = new Set([...(plan.needs || []).flatMap(n => (n.options || []).map(o => o.entry_id)),
+    ...[...allText.matchAll(PLACEHOLDER)].map(m => m[2])].filter(id => byId.has(id)));
+  const allowed = allowedNumbers(context, [...cited].map(id => byId.get(id)));
   const used = new Set(), missing = [], dropped = [], removedDigits = [];
 
   const needs = (plan.needs || []).map(n => {
