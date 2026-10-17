@@ -123,7 +123,7 @@
           </div>
         </div>
         <h2>Conversation</h2>
-        <div id="chat"><p class="empty">Press Start, then talk or type. Every client in this demo is made up.</p></div>
+        <div id="chat"><p class="empty">Press Call to talk with Sal, or type below. Every client in this demo is made up.</p></div>
         <div class="composer">
           <button class="btn" id="talk" disabled title="Speak your answer">Talk</button>
           <input id="text" placeholder="Or type an answer" disabled autocomplete="off">
@@ -199,7 +199,7 @@ async function api(path, body) {
 
 function renderChat() {
   const c = $("chat");
-  c.innerHTML = S.history.length ? "" : `<p class="empty">Press Start, then talk or type. Every client in this demo is made up.</p>`;
+  c.innerHTML = S.history.length ? "" : `<p class="empty">${VIEW === "staff" ? "Waiting for the client to call Sal. Every client in this demo is made up." : "Press Call to talk with Sal, or type below. Every client in this demo is made up."}</p>`;
   for (const h of S.history) {
     const d = document.createElement("div");
     d.className = "msg " + h.who;
