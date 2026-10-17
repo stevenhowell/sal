@@ -15,7 +15,7 @@
     --bg: #0b2226; --bg2: #0f2b30; --card: #12343a; --card2: #173f46; --line: #24525a;
     --ink: #f2efe8; --mute: #a9bdba; --teal: #2bb3a8; --teal-deep: #0e7c7b; --sun: #f2a541; --sun-ink: #241505;
     --display: "Sora", system-ui, sans-serif; --body: "Figtree", system-ui, -apple-system, sans-serif;
-    --gutter: clamp(16px, 4vw, 56px); --barH: 64px;
+    --gutter: clamp(16px, 4vw, 56px); --barH: 0px;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -72,7 +72,7 @@
   .tests .card { min-width: 200px; } .tests .n { font: 700 44px var(--display); color: var(--teal); }
   .demo-slide { padding: 14px var(--gutter) 18px; min-height: calc(100vh - var(--barH)); display: flex; flex-direction: column; gap: 10px; }
   .demo-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--mute); font-size: 15px; }
-  .demo-frame { flex: 1; min-height: 640px; width: 100%; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+  .demo-frame { flex: 1; min-height: 88vh; width: 100%; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
   .hint { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); color: var(--mute); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
   .first-slide { position: relative; }
   footer.closer { text-align: left; }
@@ -185,23 +185,16 @@
 </style>
 </head>
 <body>
-<header id="top">
-  <a class="brand" href="#home"><img src="/brand/sal-mark.svg" alt="">SAL</a>
-  <span class="grow"></span>
-  <nav class="tabs" role="tablist" aria-label="Sections">
-    <button role="tab" id="tab-home" aria-selected="true" aria-controls="home">Home</button>
-    <button role="tab" id="tab-demo" aria-selected="false" aria-controls="demo">Demo</button>
-  </nav>
-</header>
+
 
 <!-- HOME -->
-<main class="panel" id="home" role="tabpanel" aria-labelledby="tab-home">
+<main class="panel" id="home">
   <section class="slide intro"><div class="wrap hero">
     <div>
       <h1 class="letters" aria-label="SAL"><span>S</span><span>A</span><span>L</span></h1>
       <div class="expand"><span><b>S</b>afe</span><span><b>A</b>fter</span><span><b>L</b>eaving</span></div>
       <p class="lead">Call Sal. Leave with a plan.</p>
-      <div class="btnrow"><button class="btn primary" data-go="demo">See the demo</button><a class="btn" href="/app">Open SAL</a></div>
+      <div class="btnrow"><a class="btn primary" href="#demo">Try the demo</a><a class="btn" href="/app">Open SAL</a></div>
     </div>
     <img class="mark" src="/brand/sal-mark.svg" alt="">
   </div><div class="hint" id="hint">Scroll ↓</div></section>
@@ -246,53 +239,24 @@
       <figcaption class="steps3"><span data-i="0">Call</span><span data-i="1">Search</span><span data-i="2">Packet</span></figcaption>
     </figure>
   </div></section>
-</main>
 
-<!-- DEMO -->
-<main class="panel" id="demo" role="tabpanel" aria-labelledby="tab-demo" hidden>
-  <section class="demo-slide">
+  <section class="demo-slide" id="demo">
     <div class="demo-bar">
-      <span>Live, with made-up clients. Pick one and press <b style="color:var(--ink)">Play</b>, or <b style="color:var(--ink)">Skip to end</b> to see the packet.</span>
+      <span><b style="color:var(--ink);font-family:var(--display);font-size:20px">Try it.</b> Pick a made-up client and press Play, or Skip to end for the packet.</span>
       <span class="grow"></span>
       <a href="/demo" target="_blank" rel="noopener">Full screen ↗</a><a href="/results" target="_blank" rel="noopener">Test results ↗</a><a href="https://github.com/stevenhowell/sal" target="_blank" rel="noopener">Code ↗</a>
     </div>
-    <iframe class="demo-frame" id="demoFrame" data-src="/demo" title="SAL demo" allow="autoplay; microphone"></iframe>
+    <iframe class="demo-frame" id="demoFrame" src="/demo" loading="lazy" title="SAL demo" allow="autoplay; microphone"></iframe>
   </section>
 </main>
 
 
 
-<script>
-const ids = ["home", "demo"];
-function show(id, push = true) {
-  if (!ids.includes(id)) id = "home";
-  ids.forEach(x => {
-    document.getElementById(x).hidden = x !== id;
-    document.getElementById("tab-" + x).setAttribute("aria-selected", x === id);
-  });
-  if (id === "demo") { const f = document.getElementById("demoFrame"); if (!f.src) f.src = f.dataset.src; }
-  if (push) history.replaceState(null, "", "#" + id);
-}
-ids.forEach(x => document.getElementById("tab-" + x).onclick = () => show(x));
-document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
-document.querySelector(".brand").onclick = e => { e.preventDefault(); show("home"); document.getElementById("home").scrollTo({ top: 0 }); };
-// Arrow keys move between tabs; a horizontal swipe does the same on phones.
-document.querySelector(".tabs").addEventListener("keydown", e => {
-  const i = ids.indexOf(ids.find(x => !document.getElementById(x).hidden));
-  if (e.key === "ArrowRight" || e.key === "ArrowLeft") show(ids[(i + 1) % 2]);
-});
-let tx = null, ty = null;
-addEventListener("touchstart", e => { if (e.target.closest("iframe")) return; tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
-addEventListener("touchend", e => {
-  if (tx === null) return;
-  const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty; tx = null;
-  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    const i = ids.indexOf(ids.find(x => !document.getElementById(x).hidden));
-    show(ids[Math.max(0, Math.min(1, i + (dx < 0 ? 1 : -1)))]);
-  }
-}, { passive: true });
-show(location.hash.slice(1) || "home", false);
 
+
+<script>
+// "Try the demo" scrolls inside the page's scroller.
+document.querySelectorAll('a[href="#demo"]').forEach(a => a.onclick = e => { e.preventDefault(); document.getElementById("demo").scrollIntoView({ behavior: "smooth" }); });
 // ---- Home stage, driven by scroll: call → search → packet ----
 // The intro scrolls away, then the stage pins. Each scene's CSS animations are paused and moved to the
 // moment that matches the scroll position, so scrolling down plays the story and scrolling up rewinds it.
