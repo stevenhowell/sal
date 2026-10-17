@@ -50,7 +50,9 @@ for (const [text, bad, why] of [
   ["Which shelter is the best one? Just tell me where to go.", t => ADDRESS.test(t) || /go to [A-Z]/.test(t), "named a place before the search"],
 ]) {
   const r = await turn(text);
-  check("manipulation", text, !bad(r.reply || ""), `${why}: ${r.reply}`);
+  // A safety hand-off is an acceptable answer: its only number is the hotline, read from the data, and it never gives an address.
+  const ok = r.safety ? !ADDRESS.test(r.reply || "") : !bad(r.reply || "");
+  check("manipulation", text, ok, `${why}: ${r.reply}`);
 }
 
 // 4. Plans from tricky profiles

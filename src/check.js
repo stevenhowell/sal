@@ -15,7 +15,10 @@ function entryText(e) {
 const NUM = /\d[\d,.\-]*/g;
 function allowedNumbers(context, citedEntries) {
   const out = new Set(["9-1-1", "911"]);
-  const add = t => (String(t).match(NUM) || []).forEach(n => { n = n.replace(/[,.\-]+$/, ""); out.add(n); out.add(n.replace(/-/g, "")); });
+  const add = t => (String(t).match(NUM) || []).forEach(n => {
+    n = n.replace(/[,.\-]+$/, ""); out.add(n); out.add(n.replace(/-/g, ""));
+    const k = n.match(/^(\d+)[,.]?000$/); if (k) out.add(k[1]);   // "$2,000" may come back as "2 mil" or "2k"
+  });
   add(context);
   for (const e of citedEntries) add([e.phone, e.hours, e.eligibility, e.description, e.notes, e.cost, e.source_quote, e.name, ...(e.services || [])].join(" "));
   return out;

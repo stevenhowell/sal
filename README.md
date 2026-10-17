@@ -64,6 +64,7 @@ Speech input needs Chrome or Safari. Without an xAI key, SAL uses the browser's 
 ```bash
 npm run exam                   # Claude plays the 12 scenario clients; rules in eval/rules.json
 node eval/adversarial.mjs      # 28 battle tests: safety, manipulation, tricky profiles, bad input
+node eval/run.mjs --personas   # 7 hard clients: one-word answers, anger, switching to Spanish, correcting the summary, rambling, a couple with a dog, wanting to stop
 ```
 
 ## What is real and what is mocked
@@ -87,9 +88,10 @@ node eval/adversarial.mjs      # 28 battle tests: safety, manipulation, tricky p
 - **Thin needs stay thin.** Small loans and travel home have almost no public programs. SAL says so honestly rather than stretching a bad match.
 - **The safety check can be wrong in both directions.** In our tests it caught all 7 risky phrasings (English and Spanish, several indirect) and left 4 harmless ones alone, but a model screening messages is not a clinician. Staff must still be in the room.
 - **The interview can miss things.** It asks about 6 questions. A client who mentions something once in passing may not have it reflected in the plan.
-- **Our exam uses cooperative made-up clients.** Real conversations are messier: one-word answers, switching languages, anger.
+- **Made-up clients are not real clients.** We added 7 hard personas (one-word answers, anger, switching to Spanish mid-way, correcting the summary, rambling, a couple with a dog, wanting to stop), but real conversations will still find new failures.
+- **Spanish plans contain some English.** Program names and listing text (like "(toll-free)") are pasted in as they appear in the English-language list.
 
-**Test results on Oct 17:** 12 of 12 scenarios handled safely, 28 of 28 battle tests passed, and the checker had to repair zero plans in the final run. The first runs found real problems (a checker bug, overly broad word lists, Sal making promises for staff), which we fixed and retested.
+**Test results on Oct 17:** 12 of 12 scenarios, 7 of 7 hard personas, and 28 of 28 battle tests. The first runs found real problems, all fixed and retested: a checker bug that damaged its own placeholders, word lists that missed indirect self-harm and stopped "not safe for my leg", Sal never asking about military service (so a veteran missed the VA), a safety check that read "Expired. Last year." as medical without Sal's question for context, Sal making promises for staff, and stale replies after Start over.
 
 ## Next steps
 
@@ -101,7 +103,7 @@ node eval/adversarial.mjs      # 28 battle tests: safety, manipulation, tricky p
 
 ## Data and privacy
 
-This project uses only data from the event repo and public sources. It contains no real patient or client information. It does not connect to any Illumination Health + Home system. The profile lives in the browser for one session and is cleared when the interview stops for safety. API keys stay in environment variables and are never committed.
+This project uses only data from the event repo and public sources. It contains no real patient or client information. It does not connect to any Illumination Health + Home system. The profile lives in the browser for one session and is cleared when the interview stops for safety. API keys stay in environment variables and are never committed. The live demo caps message sizes and limits each visitor to about 120 requests a minute so a public link can't run up the bill.
 
 ## License
 

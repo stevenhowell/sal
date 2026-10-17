@@ -1,0 +1,21 @@
+{
+  "about": "Hard made-up clients for battle-testing SAL's interview. Same shape as the event's scenarios, with rules alongside. No real person is described.",
+  "scenarios": [
+    { "id": "P1", "title": "One-word answers", "client": "Ollie, 50. Leaving recuperative care Monday. Needs somewhere to sleep. Uses a cane. Has an expired ID. Answers almost everything in one or two words ('Yeah.', 'No.', 'Dunno.', 'Anaheim.'). Never more than four words.", "in_their_words": "Need a bed.", "needs": ["shelter"], "constraints": ["Answers in one to four words only"] },
+    { "id": "P2", "title": "Angry and distrustful", "client": "Ana, 44. Frustrated and suspicious of 'another app'. Leaving in a week. Needs a place to sleep and wants work. Says things like 'Whatever, just tell me something useful.' Mild swearing ('this is crap'). Eventually answers.", "in_their_words": "Another app? This is crap. Nobody's helped me yet.", "needs": ["shelter", "employment"], "constraints": ["Distrustful at first", "No car"] },
+    { "id": "P3", "title": "Switches to Spanish", "client": "Carlos, 58. Starts in English but after his second answer says 'Can we do Spanish? Mi inglés no es muy bueno' and speaks only Spanish after that. Needs a place to sleep. Has Medi-Cal.", "in_their_words": "I need a place to stay when I leave.", "needs": ["shelter"], "constraints": ["Switches to Spanish after the second answer"] },
+    { "id": "P4", "title": "Corrects the summary", "client": "Dee, 39. Needs a place to sleep and help getting ID. When Sal reads back the summary, Dee corrects the city: 'No, I said Anaheim, not Santa Ana.' Last lived in Anaheim.", "in_their_words": "I need a place to sleep and I lost my ID.", "needs": ["shelter", "id-documents"], "constraints": ["Will correct a wrong summary"] },
+    { "id": "P5", "title": "Rambling Navy veteran", "client": "Lou, 66. Rambles in long answers about the past. Served in the Navy in the 1970s and mentions it in passing only if asked about work or service. No discharge papers. Needs housing help.", "in_their_words": "Well, it's a long story, but I guess what I need is a roof, you know, somewhere I can actually stay put for once.", "needs": ["housing-navigation", "veterans"], "constraints": ["Long rambling answers"] },
+    { "id": "P6", "title": "Couple with a dog", "client": "Rae, 47. Leaving with a partner, Jo, and a small dog, Biscuit. Won't go anywhere that separates them from Jo or the dog. Needs a place to sleep.", "in_their_words": "Me and my partner need somewhere, and we've got a dog. I'm not leaving my dog.", "needs": ["shelter"], "constraints": ["Partner and dog must stay together"] },
+    { "id": "P7", "title": "Wants to stop talking", "client": "Max, 52. Tired of questions. After two answers says 'I'm done answering questions for today.' Not in danger and not thinking of self-harm; just tired of paperwork. Needs a place to sleep.", "in_their_words": "I need a bed I guess.", "needs": ["shelter"], "constraints": ["Stops after two answers"] }
+  ],
+  "rules": {
+    "P1": { "lang": "en", "expect_plan": true, "not_fits": [] },
+    "P2": { "lang": "en", "expect_plan": true, "not_fits": [] },
+    "P3": { "lang": "en", "expect_plan": true, "not_fits": [], "sal_follows_spanish": true },
+    "P4": { "lang": "en", "expect_plan": true, "not_fits": [], "card_has": { "last_city": "anaheim" } },
+    "P5": { "lang": "en", "expect_plan": true, "not_fits": [], "options_include_any": ["va-crrc-santa-ana", "oc-veterans-service-office"] },
+    "P6": { "lang": "en", "expect_plan": true, "not_fits": [] },
+    "P7": { "lang": "en", "expect_plan": false, "expect_no_stop": true }
+  }
+}

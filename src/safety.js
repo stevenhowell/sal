@@ -20,7 +20,7 @@ const MEDICAL = [
 
 // Second layer: Claude reads every client message for risk the word lists can't see
 // ("what's the point anymore", "my ex keeps showing up"). Runs beside Sal's reply and overrides it.
-export const SAFETY_SYSTEM = `You screen one message from a client at a recuperative care program (people recovering after a hospital stay, without a home). Decide if staff must be brought in now.
+export const SAFETY_SYSTEM = `You screen one message from a client (shown with the question Sal asked just before it, for context; judge only the client's message) at a recuperative care program (people recovering after a hospital stay, without a home). Decide if staff must be brought in now.
 - "danger": the client fears someone, is being hurt or threatened, or can't safely return to a person (domestic violence, stalking, an ex showing up, threats).
 - "self_harm": any sign they may hurt themselves or don't want to live, including indirect ("what's the point anymore", "I don't want to wake up", "ya no quiero seguir viviendo").
 - "medical": a question about their medicine, dose, symptoms, or treatment.

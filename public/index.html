@@ -151,6 +151,7 @@ const VIEW = params.get("view") || "all";   // client | staff | all
 document.body.classList.add(VIEW);
 if (params.get("embed")) document.body.classList.add("embed");
 const channel = "BroadcastChannel" in window ? new BroadcastChannel("sal") : null;
+if (channel && VIEW !== "staff") channel.addEventListener("message", e => { if (e.data?.type === "hello") publish(); });
 function publish() { if (channel && VIEW !== "staff") channel.postMessage({ history: S.history, card: S.card, plan: S.plan, live: S.live, searching: S.searching, answers: S.history.filter(h => h.who === "client").length, alert: $("alert").hidden ? "" : $("alert").textContent, lang: S.lang }); }
 
 function setStatus(t) { $("status").textContent = t || ""; }
@@ -238,7 +239,7 @@ function listen() {
 // ---- conversation ----
 async function start() {
   audio.pause(); speechSynthesis.cancel();
-  Object.assign(S, { history: [], card: {}, stopped: false, plan: null, live: null, searching: false, liveRun: (S.liveRun || 0) + 1 });
+  Object.assign(S, { history: [], card: {}, stopped: false, plan: null, live: null, searching: false, busy: false, liveRun: (S.liveRun || 0) + 1, session: (S.session || 0) + 1 });
   $("livePanel").hidden = true;
   $("alert").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true;
   renderCard(); $("start").textContent = "Start over";
@@ -255,9 +256,11 @@ async function send() {
 }
 
 async function step() {
+  const session = S.session;
   S.busy = true; setInputs(false); setStatus("Sal is thinking…");
   try {
     const r = await api("/api/turn", { history: S.history, lang: S.lang, hint: S.live?.next_question || "" });
+    if (session !== S.session) return;   // the conversation was restarted while Sal was thinking
     for (const u of r.card_updates || []) S.card[u.field] = u.value;
     S.history.push({ who: "sal", text: r.reply });
     renderChat(); renderCard(); setStatus("");
@@ -267,8 +270,9 @@ async function step() {
       if (r.safety.stop) { S.stopped = true; S.history = S.history.slice(-2); renderChat(); S.card = {}; renderCard(); }
     }
     S.lastSay = say(r.reply);
-    if (r.ready_for_plan) { await S.lastSay; await makePlan(); }
-  } catch (e) { setStatus(e.message); }
+    if (r.ready_for_plan) { await S.lastSay; if (session === S.session) await makePlan(session); }
+  } catch (e) { if (session === S.session) setStatus(e.message); }
+  if (session !== S.session) return;
   S.busy = false; setInputs(true);
 }
 
@@ -300,10 +304,11 @@ function renderLive(d = S) {
   publish();
 }
 
-async function makePlan() {
+async function makePlan(session = S.session) {
   $("status").innerHTML = `<span class="pulse"></span>${S.lang === "es" ? "Buscando tu próximo paso en 41 programas revisados…" : "Checking 41 programs for your next step…"}`;
   const transcript = S.history.map(h => (h.who === "sal" ? "Sal: " : "Client: ") + h.text).join("\n");
   const p = await api("/api/plan", { card: S.card, transcript, lang: S.lang });
+  if (session !== S.session) return;
   S.plan = p; S.liveRun++; S.searching = false; $("livePanel").hidden = true; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
   S.lastSay = say(p.client_message);
 }
@@ -375,12 +380,14 @@ window.addEventListener("message", e => { if (e.origin === location.origin && e.
 if (VIEW === "staff") {
   $("chat").innerHTML = `<p class="empty">Waiting for the client's tablet.</p>`;
   channel && (channel.onmessage = e => {
-    const d = e.data; S.history = d.history; S.card = d.card; S.plan = d.plan; S.lang = d.lang;
+    const d = e.data;
+    if (d.type === "hello") return; S.history = d.history; S.card = d.card; S.plan = d.plan; S.lang = d.lang;
     renderChat(); renderCard();
     if (!d.plan) renderLive(d); else $("livePanel").hidden = true;
     if (d.alert) { $("alert").textContent = d.alert; $("alert").hidden = false; } else $("alert").hidden = true;
     if (d.plan) renderPlan(); else { $("planPanel").hidden = true; $("staffPanel").hidden = true; }
   });
+  channel && channel.postMessage({ type: "hello" });   // opened late: ask the tablet for where things stand
 }
 
 fetch("/api/status").then(r => r.json()).then(k => {

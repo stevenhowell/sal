@@ -3,5 +3,7 @@
   "main": "src/worker.js",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
-  "assets": { "directory": "public" }
+  "assets": { "directory": "public" },
+  // Per-visitor cap so a public link can't run up the API bill. A full demo interview uses well under this.
+  "ratelimits": [{ "name": "LIMITER", "namespace_id": "4820", "simple": { "limit": 120, "period": 60 } }]
 }

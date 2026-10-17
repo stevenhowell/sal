@@ -14,6 +14,11 @@ const entry = id => BY_ID.get(id);
 const PLAN_SYSTEM = planSystem(JSON.stringify(RESOURCES), JSON.stringify(staff.answers));
 const LIVE_SYSTEM = liveSystem(JSON.stringify(RESOURCES));
 
+// Input caps: keep requests (and the API bill) small no matter what is sent.
+const clip = (t, n) => String(t ?? "").slice(0, n);
+const cleanHistory = h => (Array.isArray(h) ? h : []).slice(-40).map(x => ({ who: x?.who === "sal" ? "sal" : "client", text: clip(x?.text, 1000) }));
+const cleanCard = c => Object.fromEntries(Object.entries(c && typeof c === "object" ? c : {}).slice(0, 20).map(([k, v]) => [clip(k, 40), clip(v, 300)]));
+
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { "content-type": "application/json; charset=utf-8" },
 });
@@ -33,7 +38,8 @@ function readJson(res) {
 
 // POST /api/turn  { history: [{who: "sal"|"client", text}], lang }
 async function turn(req, env) {
-  const { history = [], lang = "en", hint = "" } = await req.json();
+  const body = await req.json();
+  const history = cleanHistory(body.history), lang = clip(body.lang || "en", 5), hint = clip(body.hint, 200);
   const l = lang.startsWith("es") ? "es" : "en";
   if (!history.length) return json({ reply: GREETING[l], card_updates: [], ready_for_plan: false });
 
@@ -50,7 +56,8 @@ async function turn(req, env) {
   const screen = last.who === "client" ? claude(env).messages.create({
     model: "claude-haiku-5-5", max_tokens: 1000, system: SAFETY_SYSTEM,
     output_config: { effort: "low", format: { type: "json_schema", schema: SAFETY_SCHEMA } },
-    messages: [{ role: "user", content: last.text.slice(0, 4000) }],
+    // Sal's last question gives context: "Expired. Last year." is about an ID, not medicine.
+    messages: [{ role: "user", content: `Sal asked: "${(history[history.length - 2]?.text || "").slice(0, 600)}"\nClient's message to screen: "${last.text.slice(0, 4000)}"` }],
   }).then(readJson).catch(() => ({ kind: "none" })) : Promise.resolve({ kind: "none" });
 
   const messages = [{ role: "user", content: "(The client has sat down. Sal greets them.)" }];
@@ -59,8 +66,8 @@ async function turn(req, env) {
   const answers = history.filter(h => h.who === "client").length;
   const summarized = history.some(h => h.who === "sal" && /here's what i heard|esto es lo que escuché/i.test(h.text));
   if (summarized && answers >= 2) messages.push({ role: "system", content: "Sal already read back a summary. If the client agreed (even loosely, like 'yes' or 'that's right'), set ready_for_plan to true and say you'll find their next step now. If they corrected something, record it and set ready_for_plan to true." });
-  else if (hint && answers < 6) messages.push({ role: "system", content: `The live search says this would help decide between programs: "${hint.slice(0, 200)}". Ask it next in your own plain words, unless the client already answered it or it doesn't fit the moment.` });
-  else if (answers >= 6) messages.push({ role: "system", content: "You have enough. Read back the summary now, starting with \"Here's what I heard\" (Spanish: \"Esto es lo que escuché\"), and ask if it's right." });
+  else if (hint && answers < 7) messages.push({ role: "system", content: `The live search says this would help decide between programs: "${hint.slice(0, 200)}". Ask it next in your own plain words, unless the client already answered it or it doesn't fit the moment.` });
+  else if (answers >= 7) messages.push({ role: "system", content: "You have enough. Read back the summary now, starting with \"Here's what I heard\" (Spanish: \"Esto es lo que escuché\"), and ask if it's right." });
   const t0 = Date.now();
   const [res, verdict] = await Promise.all([claude(env).messages.create({
     model: "claude-haiku-5-5",
@@ -78,7 +85,8 @@ async function turn(req, env) {
 
 // POST /api/plan  { card, transcript, lang }
 async function plan(req, env) {
-  const { card = {}, transcript = "", lang = "en", effort = "low" } = await req.json();
+  const body = await req.json();
+  const card = cleanCard(body.card), transcript = clip(body.transcript, 12000), lang = clip(body.lang || "en", 5), effort = body.effort;
   const context = JSON.stringify(card) + "\n" + transcript;
   const t0 = Date.now();
   const res = await claude(env).beta.messages.create({
@@ -97,7 +105,7 @@ async function plan(req, env) {
 
 // POST /api/live  { card, lang }  → a checked shortlist while the interview is still going
 async function live(req, env) {
-  const { card = {} } = await req.json();
+  const card = cleanCard((await req.json()).card);
   if (!card.needs) return json({ needs: [], next_question: "", searched: RESOURCES.length });
   const t0 = Date.now();
   const res = await claude(env).messages.create({
@@ -129,7 +137,8 @@ async function speak(req, env) {
 
 // POST /api/simclient  { scenario, history, lang }  → the next line from a made-up client (demo only)
 async function simclient(req, env) {
-  const { scenario = "C01", history = [], lang = "en" } = await req.json();
+  const body = await req.json();
+  const scenario = clip(body.scenario || "C01", 5), history = cleanHistory(body.history), lang = clip(body.lang || "en", 5);
   const sc = scenarios.scenarios.find(s => s.id === scenario);
   if (!sc) return json({ error: "Unknown scenario" }, 400);
   if (!history.some(h => h.who === "client")) return json({ text: sc.in_their_words });
@@ -140,7 +149,7 @@ async function simclient(req, env) {
     system: `You are role-playing a made-up person to demo a helper app called Sal. Stay in character. Nothing here is a real person.
 Character: ${sc.client}
 Constraints: ${sc.constraints.join("; ") || "none"}
-Speak ${lang.startsWith("es") ? "Spanish" : "English"}, the way this person talks out loud. Answer Sal's question in one or two short sentences. Don't volunteer everything at once. If Sal reads back a summary that is right, say yes. Reply with only your words.`,
+Speak ${lang.startsWith("es") ? "Spanish" : "English"}, the way this person talks out loud. Answer Sal's question in one or two short sentences. Don't volunteer everything at once. Stay inside your character: don't invent big facts that aren't in it (another state, a diagnosis, a job). If asked something your character doesn't cover, give a plain, ordinary answer that fits someone in Orange County, California. If Sal reads back a summary that is right, say yes. Reply with only your words.`,
     messages: history.map(h => ({ role: h.who === "sal" ? "user" : "assistant", content: h.text })),
   });
   return json({ text: res.content.find(b => b.type === "text")?.text.trim() || "Okay." });
@@ -150,6 +159,11 @@ export default {
   async fetch(req, env) {
     const { pathname } = new URL(req.url);
     try {
+      const ip = req.headers.get("cf-connecting-ip");   // set by Cloudflare for real visitors, absent in local dev
+      if (req.method === "POST" && pathname.startsWith("/api/") && env.LIMITER && ip) {
+        const { success } = await env.LIMITER.limit({ key: ip });
+        if (!success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
+      }
       if (req.method === "POST" && pathname === "/api/turn") return await turn(req, env);
       if (req.method === "POST" && pathname === "/api/plan") return await plan(req, env);
       if (req.method === "POST" && pathname === "/api/speak") return await speak(req, env);
