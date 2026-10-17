@@ -79,6 +79,19 @@
   @media (max-width: 820px) { .facts { grid-template-columns: 1fr; } }
   .fact { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px; }
   .fact .big { font-size: clamp(56px, 7vw, 92px); } .fact p { font: 600 20px/1.3 var(--display); margin: 12px 0 10px; } .fact small { color: var(--mute); font-size: 14px; }
+  /* ---- Scroll track: the pin stays on screen while the track scrolls past ---- */
+  #home { scroll-snap-type: none; }
+  .track { height: 360vh; position: relative; }
+  .pin { position: sticky; top: 0; height: calc(100vh - var(--barH)); display: grid; align-content: center; padding: 24px var(--gutter); }
+  .bar { height: 3px; border-radius: 2px; background: var(--line); margin: 14px auto 0; width: 180px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--sun); }
+  .hint { transition: opacity .3s; }
+  @media (max-width: 820px) {
+    .pin { align-content: start; padding-top: 18px; }
+    .letters { font-size: 84px; } .expand { font-size: 18px; } .lead { font-size: 18px; margin-top: 8px; } .btnrow { margin-top: 14px; }
+    .btn { min-height: 44px; } .scenes { height: 360px; } .phone { transform: scale(.84); }
+    .sheet { transform-origin: center; scale: .88; } .hint { display: none; }
+  }
   /* ---- Home stage: call → search → packet ---- */
   .stage { margin: 0; justify-self: center; width: min(420px, 100%); }
   .scenes { position: relative; height: 470px; border-radius: 28px; background: radial-gradient(120% 90% at 50% 0%, #17454b 0%, var(--bg2) 60%); border: 1px solid var(--line); overflow: hidden; }
@@ -170,7 +183,7 @@
 
 <!-- HOME -->
 <main class="panel" id="home" role="tabpanel" aria-labelledby="tab-home">
-  <section class="slide"><div class="wrap hero">
+  <section class="track"><div class="pin"><div class="wrap hero">
     <div>
       <h1 class="letters" aria-label="SAL"><span>S</span><span>A</span><span>L</span></h1>
       <div class="expand"><span><b>S</b>afe</span><span><b>A</b>fter</span><span><b>L</b>eaving</span></div>
@@ -214,8 +227,9 @@
         </div>
       </div>
       <figcaption class="steps3"><span data-i="0">Call</span><span data-i="1">Search</span><span data-i="2">Packet</span></figcaption>
+      <div class="bar"><i id="prog"></i></div>
     </figure>
-  </div></section>
+  </div><div class="hint" id="hint">Scroll</div></div></section>
 </main>
 
 <!-- DEMO -->
@@ -274,34 +288,41 @@ addEventListener("touchend", e => {
 }, { passive: true });
 show(location.hash.slice(1) || "home", false);
 
-// ---- Home stage timeline: call → search → packet, looping ----
+// ---- Home stage, driven by scroll: call → search → packet ----
+// Each scene's CSS animations are paused and moved to the moment that matches the scroll position,
+// so scrolling down plays the story and scrolling up rewinds it.
 (() => {
+  const home = document.getElementById("home");
   const scenes = [...document.querySelectorAll("#stage .scene")], caps = [...document.querySelectorAll("#stage .steps3 span")];
+  const prog = document.getElementById("prog"), hint = document.getElementById("hint");
+  const cnt = document.getElementById("cnt"), lbl = document.getElementById("cntLbl");
+  const lengths = [4300, 3000, 4200];   // how much of each scene's animation the scroll covers (ms)
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const lengths = [5600, 4200, 5600];
-  let i = 0, timer = null;
-  function count() {
-    const el = document.getElementById("cnt"), lbl = document.getElementById("cntLbl"); const t0 = performance.now();
-    clearInterval(count.t);
-    const go = () => {
-      const k = Math.min(1, (performance.now() - t0 - 900) / 1500);
-      const v = k < 0 ? 41 : Math.round(41 - 38 * (1 - Math.pow(1 - k, 3)));
-      el.textContent = v; lbl.textContent = v > 3 ? "programs checked" : "good matches";
-      if (k >= 1 || !scenes[1].classList.contains("on")) clearInterval(count.t);
-    };
-    el.textContent = 41; lbl.textContent = "programs checked"; count.t = setInterval(go, 40);
+  let current = -1;
+  function enter(n) {
+    scenes.forEach(sc => sc.classList.remove("on")); void scenes[n].offsetWidth;
+    scenes[n].classList.add("on"); current = n;
+    caps.forEach((c, k) => c.classList.toggle("on", k === n));
+    scenes[n].getAnimations({ subtree: true }).forEach(an => an.pause());
   }
-  function play(n) {
-    scenes.forEach(s => s.classList.remove("on")); void scenes[n].offsetWidth;   // restart the scene's animations
-    scenes[n].classList.add("on"); caps.forEach((c, k) => c.classList.toggle("on", k === n));
-    if (n === 1) count();
-    if (!reduce) timer = setTimeout(() => play(i = (n + 1) % 3), lengths[n]);
+  function update() {
+    const max = home.scrollHeight - home.clientHeight;
+    const p = max > 0 ? Math.min(1, Math.max(0, home.scrollTop / max)) : 0;
+    const n = Math.min(2, Math.floor(p * 3));
+    if (n !== current) enter(n);
+    const local = Math.min(1, Math.max(0, p * 3 - n));
+    const t = local * lengths[n];
+    scenes[n].getAnimations({ subtree: true }).forEach(an => { an.currentTime = an.effect?.getTiming().iterations === Infinity && t > 1800 ? 1800 + ((t - 1800) % 1800) : t; });
+    if (n === 1) { const k = Math.min(1, Math.max(0, (t - 600) / 1800)); const v = Math.round(41 - 38 * (1 - Math.pow(1 - k, 3))); cnt.textContent = v; lbl.textContent = v > 3 ? "programs checked" : "good matches"; }
+    prog.style.width = (p * 100).toFixed(1) + "%";
+    hint.style.opacity = p > 0.02 ? 0 : 1;
   }
-  if (reduce) { play(2); return; }
-  play(0);
-  // Pause while the Home panel is hidden, resume when it comes back.
-  new MutationObserver(() => { const hidden = document.getElementById("home").hidden; clearTimeout(timer); if (!hidden) play(i); }).observe(document.getElementById("home"), { attributes: true, attributeFilter: ["hidden"] });
-  caps.forEach((c, k) => { c.style.cursor = "pointer"; c.onclick = () => { clearTimeout(timer); play(i = k); }; });
+  if (reduce) { enter(2); scenes[2].getAnimations({ subtree: true }).forEach(an => an.finish()); prog.style.width = "100%"; return; }
+  home.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
+  addEventListener("resize", update);
+  update();
+  // Clicking Call, Search or Packet scrolls to that part of the story.
+  caps.forEach((c, k) => { c.style.cursor = "pointer"; c.onclick = () => { const max = home.scrollHeight - home.clientHeight; home.scrollTo({ top: max * (k / 3 + 0.3), behavior: "smooth" }); }; });
 })();
 
 </script>
