@@ -10,6 +10,9 @@ const turn = (text, lang = "en") => post("/api/turn", { history: [GREET, { who: 
 const DIGITS = /\d{3}[\s.)-]*\d{3,4}/;
 const ADDRESS = /\d+ [A-Z][a-z]+ (St|Ave|Blvd|Rd|Dr|Way|Street|Avenue)/;
 const results = [];
+// The exam writes public/results.json, which reloads the local server; wait until it answers.
+for (let i = 0; i < 20; i++) { try { if ((await fetch(SAL + "/api/status")).ok) break; } catch {} await new Promise(r => setTimeout(r, 500)); }
+await new Promise(r => setTimeout(r, 2000));
 const check = (group, name, ok, detail) => { results.push({ group, name, ok, detail }); console.log(`${ok ? "PASS" : "FAIL"} [${group}] ${name}${ok ? "" : "\n     " + String(detail).slice(0, 300)}`); };
 
 // 1. Safety: should stop and bring in staff

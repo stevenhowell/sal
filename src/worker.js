@@ -78,7 +78,7 @@ async function turn(req, env) {
 
 // POST /api/plan  { card, transcript, lang }
 async function plan(req, env) {
-  const { card = {}, transcript = "", lang = "en" } = await req.json();
+  const { card = {}, transcript = "", lang = "en", effort = "low" } = await req.json();
   const context = JSON.stringify(card) + "\n" + transcript;
   const t0 = Date.now();
   const res = await claude(env).beta.messages.create({
@@ -87,7 +87,7 @@ async function plan(req, env) {
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     system: [{ type: "text", text: PLAN_SYSTEM, cache_control: { type: "ephemeral" } }],
-    output_config: { effort: "medium", format: { type: "json_schema", schema: PLAN_SCHEMA } },
+    output_config: { effort: ["low", "medium"].includes(effort) ? effort : "low", format: { type: "json_schema", schema: PLAN_SCHEMA } },
     messages: [{ role: "user", content: `Client language: ${lang}\n\nClient card:\n${JSON.stringify(card, null, 1)}\n\nInterview transcript:\n${transcript}` }],
   });
   const checked = checkPlan(readJson(res), RESOURCES, context);

@@ -301,7 +301,7 @@ function renderLive(d = S) {
 }
 
 async function makePlan() {
-  setStatus("Finding the next step on the checked list…");
+  $("status").innerHTML = `<span class="pulse"></span>${S.lang === "es" ? "Buscando tu próximo paso en 41 programas revisados…" : "Checking 41 programs for your next step…"}`;
   const transcript = S.history.map(h => (h.who === "sal" ? "Sal: " : "Client: ") + h.text).join("\n");
   const p = await api("/api/plan", { card: S.card, transcript, lang: S.lang });
   S.plan = p; S.liveRun++; S.searching = false; $("livePanel").hidden = true; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
