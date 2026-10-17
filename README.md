@@ -20,6 +20,8 @@ Two screens showing one conversation:
 
 Open `/demo.html` to watch a whole interview play by itself: Claude plays a made-up client from the event's scenario file while Sal interviews them.
 
+**Try it live:** [sal.stevenluishowell.workers.dev/demo](https://sal.stevenluishowell.workers.dev/demo) (press Play) · [exam results](https://sal.stevenluishowell.workers.dev/results)
+
 **Demo video:** [link to add]
 
 ## How Claude is used
