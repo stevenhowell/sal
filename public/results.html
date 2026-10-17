@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/brand/sal-mark.svg" type="image/svg+xml">
 <title>SAL Exam</title>
 <style>
-  :root { --bg: #f5f5f7; --surface: #fff; --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7; --ok: #1e7a3c; --ok-bg: #e3f4e8; --no: #b3261e; --no-bg: #fbe6e4; --accent: #0071e3; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a; --ok: #63d68a; --ok-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --accent: #0a84ff; } }
-  :root[data-theme="dark"] { --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a; --ok: #63d68a; --ok-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --accent: #0a84ff; }
+  :root { --bg: #f5f5f7; --surface: #fff; --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7; --ok: #1e7a3c; --ok-bg: #e3f4e8; --no: #b3261e; --no-bg: #fbe6e4; --accent: #0e7c7b; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a; --ok: #63d68a; --ok-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --accent: #2bb3a8; --on-accent: #04201d; } }
+  :root[data-theme="dark"] { --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a; --ok: #63d68a; --ok-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --accent: #2bb3a8; --on-accent: #04201d; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 -apple-system, BlinkMacSystemFont, sans-serif; }
   .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
@@ -24,7 +25,7 @@
 <body>
 <div class="wrap">
   <h1>SAL Exam</h1>
-  <p class="muted">Claude plays each of the 12 made-up clients from the event's scenario file. Rules written by hand score what SAL did. <a href="/">Back to SAL</a></p>
+  <p class="muted">Claude plays each of the 12 made-up clients from the event's scenario file. Rules written by hand score what SAL did. <a href="/app">Open SAL</a> · <a href="/">Home</a></p>
   <div id="out"><p class="muted">Loading…</p></div>
 </div>
 <script>

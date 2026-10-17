@@ -22,7 +22,7 @@ Two screens showing one conversation:
 
 Open `/demo.html` to watch a whole interview play by itself: Claude plays a made-up client from the event's scenario file while Sal interviews them. **Skip to end** loads a finished conversation the exam recorded, to go straight to the plan, text draft and packet.
 
-**Try it live:** [sal.stevenluishowell.workers.dev/demo](https://sal.stevenluishowell.workers.dev/demo) (press Play) · [exam results](https://sal.stevenluishowell.workers.dev/results)
+**Try it live:** [sal.stevenluishowell.workers.dev](https://sal.stevenluishowell.workers.dev) (Home · Demo · Why) · [demo full screen](https://sal.stevenluishowell.workers.dev/demo) · [the app](https://sal.stevenluishowell.workers.dev/app) · [exam results](https://sal.stevenluishowell.workers.dev/results)
 
 **Demo video:** [link to add]
 
@@ -55,7 +55,8 @@ cp .dev.vars.example .dev.vars    # then put your keys in .dev.vars
 npm run dev                       # http://127.0.0.1:8820
 ```
 
-- `http://127.0.0.1:8820/`: client and staff panels together
+- `http://127.0.0.1:8820/`: the SAL site (Home, Demo, Why)
+- `http://127.0.0.1:8820/app`: client and staff panels together
 - `http://127.0.0.1:8820/demo.html`: the client's tablet and the case manager's screen side by side
 - `http://127.0.0.1:8820/results.html`: the exam scoreboard
 

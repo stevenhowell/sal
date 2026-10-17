@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/brand/sal-mark.svg" type="image/svg+xml">
 <title>Discharge Packet</title>
 <style>
-  :root { --text: #1d1d1f; --muted: #5f5f66; --line: #c9c9cf; --accent: #2d5bd8; --soft: #f2f5fc; --warn: #8a5a00; --warn-bg: #fff2d6; --bg: #e9e9ee; }
+  :root { --text: #1d1d1f; --muted: #5f5f66; --line: #c9c9cf; --accent: #0e7c7b; --soft: #f2f5fc; --warn: #8a5a00; --warn-bg: #fff2d6; --bg: #e9e9ee; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
   .bar { position: sticky; top: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); z-index: 2; }
@@ -87,7 +88,7 @@ function render({ plan, lang }) {
   const half = Math.ceil(progs.length / 2);
   const pages = [
     `<section class="page"><span class="draft">${t.draft}</span>
-      <div class="brand">SAL <span>Safe After Leaving</span></div>
+      <div class="brand"><img src="/brand/sal-mark.svg" alt="" width="30" height="30" style="align-self:center">SAL <span>Safe After Leaving</span></div>
       <h1>${t.title}</h1><p class="sub">${esc(today)} · ${t.sub}</p>
       <h2>${t.today}</h2><ol class="steps">${plan.today_steps.map(x => `<li><span>${esc(x)}</span></li>`).join("")}</ol>
       ${plan.bring.length ? `<h2>${t.bring}</h2><ul class="bring">${plan.bring.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}

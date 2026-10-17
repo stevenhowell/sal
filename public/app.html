@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/brand/sal-mark.svg" type="image/svg+xml">
+<title>SAL</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7;
+    --accent: #0e7c7b; --on-accent: #fff; --sal: #e3f3f1; --client: #f0f0f2;
+    --fits: #1e7a3c; --fits-bg: #e3f4e8; --no: #b3261e; --no-bg: #fbe6e4; --unk: #8a5a00; --unk-bg: #fff2d6;
+    --alert-bg: #fbe6e4; --alert-edge: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a;
+    --accent: #2bb3a8; --on-accent: #04201d; --sal: #123a3d; --client: #2c2c2e;
+    --fits: #63d68a; --fits-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --unk: #f5c451; --unk-bg: #33280b;
+    --alert-bg: #3a1513; --alert-edge: #ff8a80; } }
+  :root[data-theme="dark"] {
+    --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a;
+    --accent: #2bb3a8; --on-accent: #04201d; --sal: #123a3d; --client: #2c2c2e;
+    --fits: #63d68a; --fits-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --unk: #f5c451; --unk-bg: #33280b;
+    --alert-bg: #3a1513; --alert-edge: #ff8a80; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 14px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: 0.02em; }
+  .tag { color: var(--muted); }
+  .grow { flex: 1; }
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+  .seg button { min-height: 38px; min-width: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  button.btn { min-height: 44px; min-width: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  button:active { opacity: .7; } button:disabled { opacity: .4; cursor: default; }
+  .notice { background: var(--unk-bg); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
+  .alert { background: var(--alert-bg); border: 2px solid var(--alert-edge); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { font-size: 15px; margin: 0 0 10px; }
+  #chat { min-height: 300px; max-height: 56vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .msg { padding: 10px 12px; border-radius: 12px; max-width: 88%; }
+  .msg.sal { background: var(--sal); }
+  .msg.client { background: var(--client); align-self: flex-end; }
+  .msg .who { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .empty { color: var(--muted); margin: 0; }
+  .composer { display: flex; gap: 8px; margin-top: 12px; }
+  .composer input { flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font: inherit; color: var(--text); background: var(--bg); }
+  #talk.listening { background: var(--no); border-color: var(--no); color: #fff; }
+  .status { color: var(--muted); font-size: 13px; min-height: 18px; margin-top: 6px; }
+  dl { margin: 0; display: grid; grid-template-columns: 130px 1fr; gap: 6px 10px; }
+  dt { color: var(--muted); font-size: 13px; } dd { margin: 0; }
+  dl .empty { grid-column: 1 / -1; }
+  ol, ul { margin: 0; padding-left: 20px; } li { margin: 4px 0; }
+  .say { font-size: 17px; margin: 0 0 10px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .opt { border-top: 1px solid var(--line); padding: 10px 0; }
+  .opt:first-of-type { border-top: 0; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 1px 7px; margin-right: 6px; }
+  .chip.fits { color: var(--fits); background: var(--fits-bg); }
+  .chip.does_not_fit { color: var(--no); background: var(--no-bg); }
+  .chip.unknown { color: var(--unk); background: var(--unk-bg); }
+  blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--line); color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+  h3 { font-size: 14px; margin: 14px 0 6px; }
+  body.client #livePanel, body.client #cardPanel, body.client #staffPanel, body.client #textPanel { display: none !important; }
+  body.staff header .seg, body.staff #start, body.staff .composer, body.staff #keyNotice, body.staff #planPanel .row { display: none !important; }
+  body.embed .wrap { padding-top: 12px; }
+  body.embed header { display: none; }
+  .typing { color: var(--muted); font-style: italic; }
+  .call { text-align: center; padding: 8px 0 16px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  .avatar { display: block; width: 84px; height: 84px; border-radius: 24px; margin: 0 auto 8px; }
+  .call.live .avatar { box-shadow: 0 0 0 6px color-mix(in srgb, #2bb3a8 40%, transparent); animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { box-shadow: 0 0 0 12px color-mix(in srgb, #2bb3a8 15%, transparent); } }
+  @media (prefers-reduced-motion: reduce) { .call.live .avatar { animation: none; } }
+  .callname { font-size: 22px; font-weight: 600; } .callstate { color: var(--muted); min-height: 20px; }
+  .callbtns { display: flex; justify-content: center; gap: 22px; margin-top: 12px; }
+  .round { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+  .round.green { background: #34c759; border-color: #34c759; color: #fff; } .round.red { background: #ff3b30; border-color: #ff3b30; color: #fff; }
+  .round[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+  .round:active { opacity: .7; }
+  body.staff .call { display: none; }
+  .phonebox { background: var(--bg); border: 1px solid var(--line); border-radius: 22px; padding: 16px; max-width: 340px; }
+  .bubble { background: #e9e9eb; color: #1d1d1f; border-radius: 18px; padding: 10px 14px; font-size: 15px; white-space: pre-wrap; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 1s infinite; vertical-align: middle; }
+  @keyframes pulse { 50% { opacity: .2; } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+  .lopt { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
+  @media print { header, .composer, #chatPanel, #staffPanel, .row { display: none !important; } .grid { display: block; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 style="display:flex;align-items:center;gap:10px"><img src="/brand/sal-mark.svg" alt="" width="34" height="34">SAL</h1><span class="tag">Safe After Leaving</span>
+    <span class="grow"></span>
+    <div class="seg" id="langSeg" role="group" aria-label="Language">
+      <button data-lang="en" aria-pressed="true">English</button><button data-lang="es" aria-pressed="false">Español</button>
+    </div>
+    <div class="seg" id="voiceSeg" role="group" aria-label="Voice">
+      <button data-voice="grok" aria-pressed="true" title="Grok's Lumen voice reads Sal's words">Lumen</button>
+      <button data-voice="browser" aria-pressed="false" title="The browser's built-in voice">Browser</button>
+      <button data-voice="off" aria-pressed="false">Silent</button>
+    </div>
+    <button class="btn primary" id="start">Start</button>
+  </header>
+
+  <div class="notice" id="keyNotice" hidden></div>
+  <div class="alert" id="alert" hidden></div>
+
+  <div class="grid">
+    <div>
+      <section class="panel" id="chatPanel">
+        <div class="call" id="call">
+          <img class="avatar" src="/brand/sal-mark.svg" alt="">
+          <div class="callname">Sal</div>
+          <div class="callstate" id="callState">Safe After Leaving</div>
+          <div class="callbtns">
+            <button class="round green" id="callBtn" title="Call Sal">Call</button>
+            <button class="round" id="muteBtn" hidden title="Mute your microphone">Mute</button>
+            <button class="round red" id="hangBtn" hidden title="End the call">End</button>
+          </div>
+        </div>
+        <h2>Conversation</h2>
+        <div id="chat"><p class="empty">Press Call to talk with Sal, or type below. Every client in this demo is made up.</p></div>
+        <div class="composer">
+          <button class="btn" id="talk" disabled title="Speak your answer">Talk</button>
+          <input id="text" placeholder="Or type an answer" disabled autocomplete="off">
+          <button class="btn" id="send" disabled>Send</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+      <section class="panel" id="livePanel" hidden>
+        <h2>Live search <span class="meta" id="liveMeta"></span></h2>
+        <div id="live"></div>
+      </section>
+      <section class="panel" id="textPanel" hidden>
+        <h2>Text message draft</h2>
+        <div class="phonebox"><div class="bubble" id="smsText"></div></div>
+        <p class="meta" id="smsMeta"></p>
+        <div class="row">
+          <button class="btn" disabled title="Prototype: nothing is sent">Send text</button>
+          <button class="btn" id="copySms">Copy</button>
+        </div>
+        <p class="meta">Sending is off in this prototype. The event's rules say to draft messages, not send them. Copy the text into your own phone.</p>
+      </section>
+      <section class="panel" id="staffPanel" hidden>
+        <h2>Staff view</h2>
+        <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn primary" id="openPacket">Discharge packet</button></div>
+        <div id="staff"></div>
+      </section>
+    </div>
+    <div>
+      <section class="panel" id="cardPanel">
+        <h2>Who the client is</h2>
+        <dl id="card"><p class="empty">Fills in as the client talks.</p></dl>
+      </section>
+      <section class="panel" id="planPanel" hidden>
+        <h2>Today</h2>
+        <div id="plan"></div>
+        <div class="row">
+          <button class="btn" id="readPlan">Read aloud</button>
+          <button class="btn" id="copyPlan">Copy</button>
+          <button class="btn" id="printPlan">Print</button>
+        </div>
+        <div class="status" id="planStatus"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const S = { lang: "en", voice: "grok", history: [], card: {}, busy: false, stopped: false, plan: null, keys: {} };
+const LABELS = { needs: "Needs", leaving: "Leaving", getting_around: "Getting around", id_documents: "ID", last_city: "Last lived",
+  phone: "Phone", language: "Language", insurance: "Insurance", veteran: "Veteran", money: "Money", age_group: "Age",
+  household: "Household", other: "Other" };
+const VERDICT = { fits: "Fits", does_not_fit: "Doesn't fit", unknown: "Unknown" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const audio = new Audio();
+const params = new URLSearchParams(location.search);
+const VIEW = params.get("view") || "all";   // client | staff | all
+document.body.classList.add(VIEW);
+if (params.get("embed")) document.body.classList.add("embed");
+const channel = "BroadcastChannel" in window ? new BroadcastChannel("sal") : null;
+if (channel && VIEW !== "staff") channel.addEventListener("message", e => { if (e.data?.type === "hello") publish(); });
+function publish() { if (channel && VIEW !== "staff") channel.postMessage({ history: S.history, card: S.card, plan: S.plan, live: S.live, searching: S.searching, answers: S.history.filter(h => h.who === "client").length, alert: $("alert").hidden ? "" : $("alert").textContent, lang: S.lang }); }
+
+function setStatus(t) { $("status").textContent = t || ""; }
+function seg(id, attr, val) { document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute("aria-pressed", b.dataset[attr] === val)); }
+
+async function api(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const data = await r.json().catch(() => ({ error: `Server returned ${r.status}` }));
+  if (!r.ok) throw new Error(data.error || `Server returned ${r.status}`);
+  return data;
+}
+
+function renderChat() {
+  const c = $("chat");
+  c.innerHTML = S.history.length ? "" : `<p class="empty">${VIEW === "staff" ? "Waiting for the client to call Sal. Every client in this demo is made up." : "Press Call to talk with Sal, or type below. Every client in this demo is made up."}</p>`;
+  for (const h of S.history) {
+    const d = document.createElement("div");
+    d.className = "msg " + h.who;
+    d.innerHTML = `<span class="who">${h.who === "sal" ? "Sal" : "Client"}</span>${esc(h.text)}`;
+    c.appendChild(d);
+  }
+  c.scrollTop = c.scrollHeight;
+  publish();
+}
+
+function renderCard() {
+  const keys = Object.keys(S.card);
+  setTimeout(publish);
+  $("card").innerHTML = keys.length ? keys.map(k => `<dt>${esc(LABELS[k] || k)}</dt><dd>${esc(S.card[k])}</dd>`).join("") : `<p class="empty">Fills in as the client talks.</p>`;
+}
+
+function setInputs(on) {
+  const can = on && !S.stopped && !S.busy;
+  $("talk").disabled = !can || !Recognition;
+  $("text").disabled = !can; $("send").disabled = !can;
+  if (!Recognition) $("talk").title = "Speech input needs Chrome or Safari";
+}
+
+// ---- voice out ----
+function say(text, voice = "lumen") {
+  audio.pause(); speechSynthesis.cancel();
+  if (S.voice === "off" || !text || VIEW === "staff") return Promise.resolve();
+  return new Promise(async done => {
+    if (S.voice === "grok" && S.keys.grok) {
+      try {
+        const r = await fetch("/api/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang: S.lang, voice }) });
+        if (!r.ok) throw new Error((await r.json()).error);
+        audio.src = URL.createObjectURL(await r.blob());
+        audio.onended = done; audio.onerror = done; audio.onpause = done;
+        await audio.play();
+        return;
+      } catch (e) { setStatus("Lumen voice unavailable (" + e.message + "). Using the browser voice."); }
+    }
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = S.lang === "es" ? "es-MX" : "en-US";
+    u.onend = done; u.onerror = done;
+    speechSynthesis.speak(u);
+  });
+}
+
+// ---- voice in ----
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function listen() {
+  if (rec) { rec.stop(); return; }
+  audio.pause(); speechSynthesis.cancel();
+  rec = new Recognition();
+  rec.lang = S.lang === "es" ? "es-MX" : "en-US";
+  rec.interimResults = true;
+  let finalText = "";
+  rec.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalText += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
+    }
+    $("text").value = (finalText + " " + interim).trim();
+  };
+  rec.onerror = e => (e.error === "no-speech" && S.call?.on) ? setStatus("Listening… say something, or press End.") : setStatus(e.error === "not-allowed" ? "Microphone blocked. Allow it in the browser, or type instead." : "Didn't catch that (" + e.error + "). Try again or type.");
+  rec.onend = () => {
+    rec = null; $("talk").classList.remove("listening"); $("talk").textContent = "Talk";
+    if ($("text").value.trim()) send();
+    else if (S.call?.on) setTimeout(() => maybeListen(S.session), 300);   // on a call, keep listening through silence
+  };
+  rec.start();
+  $("talk").classList.add("listening"); $("talk").textContent = "Done";
+  setStatus("Listening…");
+}
+
+// ---- conversation ----
+async function start() {
+  audio.pause(); speechSynthesis.cancel();
+  Object.assign(S, { history: [], card: {}, stopped: false, plan: null, live: null, searching: false, busy: false, liveRun: (S.liveRun || 0) + 1, session: (S.session || 0) + 1 });
+  $("livePanel").hidden = true;
+  $("alert").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true; $("textPanel").hidden = true;
+  renderCard(); $("start").textContent = "Start over";
+  await step();
+}
+
+async function send() {
+  const t = $("text").value.trim();
+  if (!t || S.busy || S.stopped) return;
+  $("text").value = "";
+  S.history.push({ who: "client", text: t });
+  renderChat();
+  await step();
+}
+
+async function step() {
+  const session = S.session;
+  S.busy = true; setInputs(false); setStatus("Sal is thinking…");
+  try {
+    const r = await api("/api/turn", { history: S.history, lang: S.lang, hint: S.live?.next_question || "", card: S.card });
+    if (session !== S.session) return;   // the conversation was restarted while Sal was thinking
+    for (const u of r.card_updates || []) S.card[u.field] = u.value;
+    S.history.push({ who: "sal", text: r.reply });
+    renderChat(); renderCard(); setStatus("");
+    if ((r.card_updates || []).length && S.card.needs && !r.safety) liveSearch();
+    if (r.safety) {
+      $("alert").textContent = r.safety.alert; $("alert").hidden = false;
+      if (r.safety.stop) { S.stopped = true; S.history = S.history.slice(-2); renderChat(); S.card = {}; renderCard(); }
+    }
+    S.lastSay = say(r.reply);
+    S.lastSay.then(() => setTimeout(() => maybeListen(session), 250));
+    if (r.ready_for_plan) { await S.lastSay; if (session === S.session) await makePlan(session); }
+  } catch (e) { if (session === S.session) setStatus(e.message); }
+  if (session !== S.session) return;
+  S.busy = false; setInputs(true);
+}
+
+// Searches the checked list again with the profile so far. Runs in the background; never blocks the conversation.
+async function liveSearch() {
+  if (S.searching) { S.liveAgain = true; return; }
+  S.searching = true; renderLive();
+  const run = S.liveRun;
+  try {
+    const r = await api("/api/live", { card: S.card, lang: S.lang });
+    if (run === S.liveRun && !S.plan) { S.live = { ...r, at: S.history.filter(h => h.who === "client").length }; }
+  } catch (e) { if (run === S.liveRun) S.live = { ...(S.live || {}), error: e.message }; }
+  S.searching = false;
+  if (run !== S.liveRun) return;
+  renderLive();
+  if (S.liveAgain && !S.plan) { S.liveAgain = false; liveSearch(); }
+}
+
+function renderLive(d = S) {
+  const L = d.live;
+  if (!L && !d.searching) { $("livePanel").hidden = true; return; }
+  $("livePanel").hidden = false;
+  $("liveMeta").innerHTML = d.searching ? `<span class="pulse"></span>Searching ${L?.searched || 41} programs…` : L ? `${L.searched} programs searched after answer ${L.at}${L.ms ? ` · ${(L.ms / 1000).toFixed(1)} s` : ""}` : "";
+  if (!L) { $("live").innerHTML = `<p class="empty">Starting the first search…</p>`; return; }
+  $("live").innerHTML = (L.error ? `<p class="meta">Last search failed: ${esc(L.error)}</p>` : "") +
+    (L.needs || []).map(n => `<h3>${esc(n.need)}</h3>${n.options.length ? n.options.map(o => `<div class="lopt"><span class="chip ${o.verdict}">${VERDICT[o.verdict]}</span><span><strong>${esc(o.entry.name)}</strong> <span class="meta">${esc(o.reason)}</span></span></div>`).join("") : `<p class="empty">Nothing on the list yet.</p>`}`).join("") +
+    (L.next_question ? `<p class="meta">Would help decide: “${esc(L.next_question)}”</p>` : "") +
+    (L.dropped ? `<p class="meta">${L.dropped} suggestion${L.dropped > 1 ? "s" : ""} thrown out by the checker.</p>` : "");
+  publish();
+}
+
+async function makePlan(session = S.session) {
+  $("status").innerHTML = `<span class="pulse"></span>${S.lang === "es" ? "Buscando tu próximo paso en 41 programas revisados…" : "Checking 41 programs for your next step…"}`;
+  const transcript = S.history.map(h => (h.who === "sal" ? "Sal: " : "Client: ") + h.text).join("\n");
+  const p = await api("/api/plan", { card: S.card, transcript, lang: S.lang });
+  if (session !== S.session) return;
+  S.plan = p; S.liveRun++; S.searching = false; $("livePanel").hidden = true; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
+  S.lastSay = say(p.client_message);
+  if (S.call?.on) S.lastSay.then(async () => {
+    if (!S.call?.on || session !== S.session) return;
+    await say(S.lang === "es" ? "Tu administrador de caso tiene tu paquete con todo esto. Cuídate." : "Your case manager has a packet with all of this. Take care.");
+    hangUp(false);
+  });
+}
+
+function renderPlan() {
+  const p = S.plan;
+  $("plan").innerHTML = `
+    <p class="say">${esc(p.client_message)}</p>
+    ${p.today_steps.length ? `<ol>${p.today_steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+    ${p.bring.length ? `<h3>${S.lang === "es" ? "Qué llevar" : "What to bring"}</h3><ul>${p.bring.map(s => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+    <p class="meta">${p.reading_grade != null ? `Reading level: grade ${p.reading_grade}. ` : ""}Draft only. Nothing is sent.</p>`;
+  $("planPanel").hidden = false;
+
+  const c = p.check;
+  const issues = c.dropped.length + c.removed_digits.length + c.missing_placeholders.length;
+  $("staff").innerHTML = `
+    <p class="meta">${issues ? `The checker caught ${issues} problem${issues > 1 ? "s" : ""} before the client saw them (below).` : "The checker found no problems: every quote matched its entry and every fact came from the list."}</p>
+    ${p.needs.map(n => `<h3>${esc(n.need)}</h3>${n.options.length ? n.options.map(o => `
+      <div class="opt"><span class="chip ${o.verdict}">${VERDICT[o.verdict]}</span><strong>${esc(o.entry.name)}</strong>
+        <div>${esc(o.reason)}</div><blockquote>“${esc(o.quote)}”</blockquote>
+        <div class="meta">${o.entry.phone ? esc(o.entry.phone) + " · " : ""}${o.entry.referral_required ? "Referral only · " : ""}checked ${esc(o.entry.verified_date)} · ${esc(o.entry.confidence)} confidence${o.entry.confidence !== "high" ? " · call first" : ""} · <a href="${esc(o.entry.source_url)}" target="_blank" rel="noopener">source</a></div>
+      </div>`).join("") : `<p class="empty">Nothing on the checked list fits this need.</p>`}`).join("")}
+    ${p.unknowns.length ? `<h3>Staff need to check</h3><ul>${p.unknowns.map(u => `<li>${esc(u)}</li>`).join("")}</ul>` : ""}
+    ${p.ask_staff.length ? `<h3>Questions for IHH staff</h3><ul>${p.ask_staff.map(u => `<li>${esc(u)}</li>`).join("")}</ul>` : ""}
+    ${c.dropped.length ? `<h3>Thrown out by the checker</h3><ul>${c.dropped.map(d => `<li>${esc(d.entry_id)}: ${esc(d.why)}</li>`).join("")}</ul>` : ""}
+    ${c.removed_digits.length ? `<h3>Numbers Claude wrote itself (removed)</h3><p>${c.removed_digits.map(esc).join(", ")}</p>` : ""}
+    ${c.missing_placeholders.length ? `<h3>Facts not on the list (replaced)</h3><p>${c.missing_placeholders.map(esc).join(", ")}</p>` : ""}`;
+  $("staffPanel").hidden = false;
+  const sms = p.client_message;
+  const unicode = /[^\x00-\x7F\u00A1\u00BF\u00D1\u00F1\u00E0\u00E8\u00E9\u00EC\u00F2\u00F9\u00C7\u00DC\u00FC\u00C4\u00E4\u00D6\u00F6\u00C5\u00E5]/.test(sms);
+  const per = unicode ? 70 : 160;
+  $("smsText").textContent = sms;
+  const phone = S.card.phone || "";
+  $("smsMeta").textContent = `${sms.length} characters · ${Math.ceil(sms.length / per)} text${Math.ceil(sms.length / per) > 1 ? "s" : ""}` +
+    (phone ? ` · client's phone: ${phone}` : " · the client's phone wasn't recorded") + (/no phone|none/i.test(phone) ? " (a printed packet may work better)" : "");
+  $("textPanel").hidden = false;
+  publish();
+}
+
+// ---- discharge packet: opens in a new window, which asks for the plan when it's ready ----
+let packetWin = null;
+$("openPacket").onclick = () => { packetWin = window.open("/packet.html", "sal-packet"); };
+window.addEventListener("message", e => {
+  if (e.origin === location.origin && e.data?.type === "packet-ready" && e.source === packetWin && S.plan)
+    packetWin.postMessage({ type: "packet", plan: S.plan, card: S.card, lang: S.lang }, location.origin);
+});
+$("copySms").onclick = async () => { try { await navigator.clipboard.writeText(S.plan?.client_message || ""); $("smsMeta").textContent += " · copied"; } catch { $("smsMeta").textContent += " · couldn't copy; select the text instead"; } };
+
+// ---- controls ----
+$("start").onclick = start;
+$("send").onclick = send;
+$("text").onkeydown = e => { if (e.key === "Enter") send(); };
+$("talk").onclick = listen;
+$("readPlan").onclick = () => S.plan && say(S.plan.client_message);
+$("printPlan").onclick = () => window.print();
+$("copyPlan").onclick = async () => {
+  const p = S.plan; if (!p) return;
+  const text = [p.client_message, ...p.today_steps.map((s, i) => `${i + 1}. ${s}`)].join("\n");
+  try { await navigator.clipboard.writeText(text); $("planStatus").textContent = "Copied."; }
+  catch { $("planStatus").textContent = "Couldn't copy. Select the text and copy it instead."; }
+};
+document.querySelectorAll("#langSeg button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; seg("langSeg", "lang", S.lang); document.documentElement.lang = S.lang; });
+document.querySelectorAll("#voiceSeg button").forEach(b => b.onclick = () => { S.voice = b.dataset.voice; seg("voiceSeg", "voice", S.voice); if (S.voice === "off") { audio.pause(); speechSynthesis.cancel(); } });
+
+// ---- phone call: ring, pick up, hands-free ----
+let actx = null;
+function ring(times = 2) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume();
+    const g = actx.createGain(); g.gain.value = 0; g.connect(actx.destination);
+    for (const f of [440, 480]) { const o = actx.createOscillator(); o.frequency.value = f; o.connect(g); o.start(); o.stop(actx.currentTime + times * 4); }
+    for (let i = 0; i < times; i++) { g.gain.setValueAtTime(0.08, actx.currentTime + i * 4); g.gain.setValueAtTime(0, actx.currentTime + i * 4 + 2); }
+  } catch {}
+  return new Promise(r => setTimeout(r, times * 4000 - 1500));   // US ringback: 2 s on, 4 s off; Sal picks up on the second ring
+}
+function callUI() {
+  const on = !!S.call?.on;
+  $("call").classList.toggle("live", on && S.call.connected);
+  $("callBtn").hidden = on; $("muteBtn").hidden = !on || !S.call.connected; $("hangBtn").hidden = !on;
+  $("muteBtn").setAttribute("aria-pressed", !!S.call?.muted);
+}
+function tick() {
+  if (!S.call?.on || !S.call.connected) return;
+  const t = Math.floor((Date.now() - S.call.t0) / 1000);
+  $("callState").textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}${S.call.muted ? " · muted" : ""}`;
+}
+async function startCall(auto = false) {
+  if (S.call?.on) return;
+  S.call = { on: true, connected: false, muted: false, auto };
+  $("callState").textContent = S.lang === "es" ? "Llamando…" : "Calling…"; callUI();
+  await ring(2);
+  if (!S.call?.on) return;
+  S.call.connected = true; S.call.t0 = Date.now(); S.call.timer = setInterval(tick, 500); tick(); callUI();
+  await start();
+}
+function hangUp(byUser = true) {
+  if (!S.call?.on) return;
+  const t = S.call.t0 ? Math.floor((Date.now() - S.call.t0) / 1000) : 0;
+  clearInterval(S.call.timer); S.call.on = false; if (rec) rec.abort?.();
+  if (byUser) { S.auto++; audio.pause(); speechSynthesis.cancel(); }
+  $("callState").textContent = (S.lang === "es" ? "Llamada terminada · " : "Call ended · ") + `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; callUI();
+  if (byUser && !S.plan && !S.stopped && S.card.needs) makePlan().catch(e => setStatus(e.message));
+}
+function maybeListen(session) {
+  if (!S.call?.on || S.call.muted || S.call.auto || !Recognition || rec) return;
+  if (session !== S.session || S.stopped || S.plan || S.busy) return;
+  listen();
+}
+$("callBtn").onclick = () => startCall(false);
+$("hangBtn").onclick = () => hangUp(true);
+$("muteBtn").onclick = () => { S.call.muted = !S.call.muted; if (S.call.muted && rec) rec.abort?.(); callUI(); tick(); if (!S.call.muted) maybeListen(S.session); };
+
+// ---- demo autoplay: Claude plays a made-up client from the event's scenario file ----
+const CLIENT_VOICE = { C01: "rex", C02: "ara", C03: "leo", C10: "ara" };
+async function autoplay(scenario, lang) {
+  S.lang = lang; seg("langSeg", "lang", lang);
+  S.auto = (S.auto || 0) + 1; const run = S.auto;
+  if (S.call?.on) hangUp(false);
+  await startCall(true);
+  if (run !== S.auto) return;
+  for (let i = 0; i < 14 && run === S.auto && !S.plan && !S.stopped; i++) {
+    await S.lastSay;
+    if (run !== S.auto) return;
+    $("text").value = ""; $("text").placeholder = "The client is answering…";
+    const { text } = await api("/api/simclient", { scenario, history: S.history, lang });
+    if (run !== S.auto) return;
+    $("text").value = text;
+    await say(text, CLIENT_VOICE[scenario] || "rex");
+    if (run !== S.auto) return;
+    await send();
+  }
+  $("text").placeholder = "Or type an answer";
+}
+// ---- demo: skip to the end with a conversation the exam recorded (public/results.json) ----
+async function loadRecorded(scenario) {
+  S.auto = (S.auto || 0) + 1;
+  if (S.call?.on) hangUp(false);
+  audio.pause(); speechSynthesis.cancel(); if (rec) rec.abort?.();
+  const d = await (await fetch("/results.json", { cache: "no-store" })).json();
+  const r = d.results.find(x => x.id === scenario);
+  if (!r) { setStatus("No recorded run for this client yet."); return; }
+  Object.assign(S, { history: r.transcript, card: r.card || {}, plan: r.plan || null, live: null, searching: false, busy: false,
+    stopped: !!r.safety && r.safety !== "medical", lang: r.lang, liveRun: (S.liveRun || 0) + 1, session: (S.session || 0) + 1 });
+  seg("langSeg", "lang", S.lang);
+  $("alert").hidden = !S.stopped; if (S.stopped) $("alert").textContent = "Staff called to the room (simulated). The interview stopped and nothing is saved.";
+  $("livePanel").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true; $("textPanel").hidden = true;
+  renderChat(); renderCard();
+  if (S.plan) renderPlan();
+  $("callState").textContent = "Recorded call"; callUI();
+  setStatus(`Showing a finished conversation recorded by the exam on ${new Date(d.ran_at).toLocaleDateString()}. Press Call or Play for a live one.`);
+  setInputs(true); publish();
+}
+
+window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "skip") loadRecorded(e.data.scenario); });
+window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "autoplay") autoplay(e.data.scenario, e.data.lang); if (e.data?.type === "voice") { S.voice = e.data.voice; seg("voiceSeg", "voice", S.voice); } if (e.data?.type === "stop") { if (S.call?.on) hangUp(true); else { S.auto++; audio.pause(); speechSynthesis.cancel(); } } });
+
+if (VIEW === "staff") {
+  $("chat").innerHTML = `<p class="empty">Waiting for the client's tablet.</p>`;
+  channel && (channel.onmessage = e => {
+    const d = e.data;
+    if (d.type === "hello") return; S.history = d.history; S.card = d.card; S.plan = d.plan; S.lang = d.lang;
+    renderChat(); renderCard();
+    if (!d.plan) renderLive(d); else $("livePanel").hidden = true;
+    if (d.alert) { $("alert").textContent = d.alert; $("alert").hidden = false; } else $("alert").hidden = true;
+    if (d.plan) renderPlan(); else { $("planPanel").hidden = true; $("staffPanel").hidden = true; $("textPanel").hidden = true; }
+  });
+  channel && channel.postMessage({ type: "hello" });   // opened late: ask the tablet for where things stand
+}
+
+fetch("/api/status").then(r => r.json()).then(k => {
+  S.keys = k;
+  const missing = [!k.claude && "Claude (ANTHROPIC_API_KEY)", !k.grok && "Grok voice (XAI_API_KEY)"].filter(Boolean);
+  if (missing.length) { $("keyNotice").textContent = `Missing in .dev.vars: ${missing.join(" and ")}. ${!k.claude ? "Sal can't think without the Claude key." : "Sal will use the browser voice."}`; $("keyNotice").hidden = false; }
+  if (!k.grok) { S.voice = "browser"; seg("voiceSeg", "voice", "browser"); }
+  $("start").disabled = !k.claude;
+}).catch(() => setStatus("Can't reach the SAL server."));
+</script>
+</body>
+</html>
