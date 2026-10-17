@@ -152,9 +152,9 @@
   .pc i { font-style: normal; color: #04201d; background: var(--teal); border-radius: 50%; width: 16px; height: 16px; display: grid; place-items: center; font-size: 10px; flex: none; opacity: 0; }
   .pc.keep { color: transparent; }
   .s-search.on .pc:not(.keep) { animation: fade .4s both; } 
-  .s-search.on .pc:nth-child(1) { animation-delay: 1s; } .s-search.on .pc:nth-child(2) { animation-delay: 1.3s; } .s-search.on .pc:nth-child(4) { animation-delay: 1.6s; } .s-search.on .pc:nth-child(6) { animation-delay: 1.9s; } .s-search.on .pc:nth-child(7) { animation-delay: 2.1s; }
+  .s-search.on .pc:nth-child(1) { animation-delay: .7s; } .s-search.on .pc:nth-child(2) { animation-delay: .95s; } .s-search.on .pc:nth-child(4) { animation-delay: 1.2s; } .s-search.on .pc:nth-child(6) { animation-delay: 1.45s; } .s-search.on .pc:nth-child(7) { animation-delay: 1.7s; }
   @keyframes fade { to { opacity: .12; transform: scale(.92); } }
-  .s-search.on .pc.keep { animation: keep .4s 2.4s both; } .s-search.on .pc.keep i { animation: in .3s 2.5s both; }
+  .s-search.on .pc.keep { animation: keep .4s 2s both; } .s-search.on .pc.keep i { animation: in .3s 2.1s both; }
   @keyframes keep { to { background: #134a4c; border-color: var(--teal); color: var(--ink); } }
 
   /* Packet */
@@ -338,7 +338,7 @@ show(location.hash.slice(1) || "home", false);
     if (scenes[n].getAnimations) scenes[n].getAnimations({ subtree: true }).forEach(an => {
       an.currentTime = an.effect && an.effect.getTiming().iterations === Infinity && t > 1800 ? 1800 + ((t - 1800) % 1800) : t;
     });
-    if (n === 1) { const k = Math.min(1, Math.max(0, (t - 600) / 1800)); const v = Math.round(41 - 38 * (1 - Math.pow(1 - k, 3))); cnt.textContent = v; lbl.textContent = v > 3 ? "programs checked" : "good matches"; }
+    if (n === 1) { const k = Math.min(1, Math.max(0, (t - 500) / 1900)); const v = Math.round(41 - 38 * (1 - Math.pow(1 - k, 3))); cnt.textContent = v; lbl.textContent = v > 3 ? "programs checked" : "good matches"; }
     prog.style.width = (p * 100).toFixed(1) + "%";
     hint.style.opacity = home.scrollTop > 20 ? 0 : 1;
   }
