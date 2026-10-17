@@ -16,7 +16,8 @@ const MAX_TURNS = 12;
 
 async function post(path, body) {
   const r = await fetch(SAL + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  const d = await r.json();
+  const raw = await r.text();
+  let d; try { d = JSON.parse(raw); } catch { throw new Error(`${path} returned ${r.status}: ${raw.slice(0, 80)}`); }
   if (!r.ok) throw new Error(d.error || r.status);
   return d;
 }
@@ -40,16 +41,20 @@ async function runOne(sc) {
   const lang = rule.lang;
   const history = [];
   const card = {};
-  let safety = null, plan = null, error = null;
+  let safety = null, plan = null, error = null, hint = "";
   const t0 = Date.now();
   try {
     let r = await post("/api/turn", { history, lang });
     history.push({ who: "sal", text: r.reply });
     history.push({ who: "client", text: sc.in_their_words });
     for (let i = 0; i < MAX_TURNS; i++) {
-      r = await post("/api/turn", { history, lang });
+      r = await post("/api/turn", { history, lang, hint });
       history.push({ who: "sal", text: r.reply });
       for (const u of r.card_updates || []) card[u.field] = u.value;
+      // Mirror the app: search the list with the profile so far and pass the deciding question to Sal.
+      if ((r.card_updates || []).length && card.needs && !r.safety && !r.ready_for_plan) {
+        try { hint = (await post("/api/live", { card, lang })).next_question || ""; } catch { hint = ""; }
+      }
       if (r.safety) { safety = r.safety.kind; if (r.safety.stop) break; }
       if (r.ready_for_plan) {
         plan = await post("/api/plan", { card, transcript: history.map(h => (h.who === "sal" ? "Sal: " : "Client: ") + h.text).join("\n"), lang });

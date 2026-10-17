@@ -3,11 +3,11 @@
 
 const DANGER = [
   /\b(he|she|they)('ll| will| is going to| gonna)? (find|hurt|kill|get) me\b/i,
-  /\bnot safe\b/i, /\bunsafe\b/i, /\bafraid (of|for) (him|her|them|my life)\b/i,
+  /\bafraid (of|for) (him|her|them|my life)\b/i, /\bnot safe (at home|with (him|her|them))\b/i,
   /\b(hits|hit|beats|beat|hurts|hurt|chokes|choked) me\b/i, /\bdomestic violence\b/i,
-  /\bcan'?t go back there\b/i, /\bin danger\b/i, /\bthreaten(ed|s|ing)? me\b/i,
-  /\bme va a (encontrar|matar|pegar|hacer daño)\b/i, /\bno estoy segura?\b/i, /\bme pega\b/i,
-  /\btengo miedo de (él|ella)\b/i, /\bpeligro\b/i, /\bviolencia doméstica\b/i,
+  /\bin danger\b/i, /\bthreaten(ed|s|ing)? me\b/i,
+  /\bme va a (encontrar|matar|pegar|hacer daño)\b/i, /\bme pega\b/i, /\bme amenaza\b/i,
+  /\btengo miedo de (él|ella)\b/i, /\bestoy en peligro\b/i, /\bviolencia doméstica\b/i,
 ];
 const SELF_HARM = [
   /\b(kill|hurt) myself\b/i, /\bsuicid/i, /\bend (it all|my life)\b/i, /\bdon'?t want to (live|be alive)\b/i,
@@ -17,6 +17,20 @@ const MEDICAL = [
   /\b(pill|pills|medication|medications|medicine|meds|dose|dosage|prescription|insulin)\b/i,
   /\bcan i (just )?stop taking\b/i, /\bside effect/i, /\b(pastilla|pastillas|medicina|medicamento|dosis)\b/i,
 ];
+
+// Second layer: Claude reads every client message for risk the word lists can't see
+// ("what's the point anymore", "my ex keeps showing up"). Runs beside Sal's reply and overrides it.
+export const SAFETY_SYSTEM = `You screen one message from a client at a recuperative care program (people recovering after a hospital stay, without a home). Decide if staff must be brought in now.
+- "danger": the client fears someone, is being hurt or threatened, or can't safely return to a person (domestic violence, stalking, an ex showing up, threats).
+- "self_harm": any sign they may hurt themselves or don't want to live, including indirect ("what's the point anymore", "I don't want to wake up", "ya no quiero seguir viviendo").
+- "medical": a question about their medicine, dose, symptoms, or treatment.
+- "none": everything else, including physical safety about a place or their body ("not safe for my leg", "is the shelter safe with a walker").
+When in doubt between none and danger or self_harm, choose the risk. Any language.`;
+
+export const SAFETY_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["kind"],
+  properties: { kind: { type: "string", enum: ["none", "danger", "self_harm", "medical"] } },
+};
 
 export function checkSafety(text) {
   if (SELF_HARM.some(r => r.test(text))) return "self-harm";

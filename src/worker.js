@@ -3,7 +3,7 @@ import seed from "../challenges/2-finding-the-right-resource/data/oc-resources.s
 import added from "../data/added.json";
 import staff from "../data/ihh-staff.json";
 import scenarios from "../challenges/2-finding-the-right-resource/scenarios/client-scenarios.json";
-import { checkSafety, safetyReply } from "./safety.js";
+import { checkSafety, safetyReply, SAFETY_SYSTEM, SAFETY_SCHEMA } from "./safety.js";
 import { checkPlan, readingGrade } from "./check.js";
 import { GREETING, INTERVIEW_SYSTEM, TURN_SCHEMA, planSystem, PLAN_SCHEMA, liveSystem, LIVE_SCHEMA } from "./prompts.js";
 
@@ -38,12 +38,20 @@ async function turn(req, env) {
   if (!history.length) return json({ reply: GREETING[l], card_updates: [], ready_for_plan: false });
 
   const last = history[history.length - 1];
-  const kind = last.who === "client" ? checkSafety(last.text) : null;
-  if (kind) {
+  const respond = kind => {
     const s = safetyReply(kind, l, entry);
     return json({ reply: s.reply, card_updates: kind === "medical" ? [] : [{ field: "other", value: "Safety concern raised" }],
       ready_for_plan: false, safety: { kind, stop: s.stop, alert: s.alert } });
-  }
+  };
+  // Layer 1: unmistakable phrases, no AI, instant.
+  const kind = last.who === "client" ? checkSafety(last.text) : null;
+  if (kind) return respond(kind);
+  // Layer 2: Claude screens the message while Sal writes its reply; a risk verdict wins.
+  const screen = last.who === "client" ? claude(env).messages.create({
+    model: "claude-haiku-5-5", max_tokens: 1000, system: SAFETY_SYSTEM,
+    output_config: { effort: "low", format: { type: "json_schema", schema: SAFETY_SCHEMA } },
+    messages: [{ role: "user", content: last.text.slice(0, 4000) }],
+  }).then(readJson).catch(() => ({ kind: "none" })) : Promise.resolve({ kind: "none" });
 
   const messages = [{ role: "user", content: "(The client has sat down. Sal greets them.)" }];
   for (const h of history) messages.push({ role: h.who === "sal" ? "assistant" : "user", content: h.text });
@@ -54,14 +62,18 @@ async function turn(req, env) {
   else if (hint && answers < 6) messages.push({ role: "system", content: `The live search says this would help decide between programs: "${hint.slice(0, 200)}". Ask it next in your own plain words, unless the client already answered it or it doesn't fit the moment.` });
   else if (answers >= 6) messages.push({ role: "system", content: "You have enough. Read back the summary now, starting with \"Here's what I heard\" (Spanish: \"Esto es lo que escuché\"), and ask if it's right." });
   const t0 = Date.now();
-  const res = await claude(env).messages.create({
+  const [res, verdict] = await Promise.all([claude(env).messages.create({
     model: "claude-haiku-5-5",
     max_tokens: 2000,
     system: INTERVIEW_SYSTEM,
     output_config: { effort: "low", format: { type: "json_schema", schema: TURN_SCHEMA } },
     messages,
-  });
-  return json({ ...readJson(res), ms: Date.now() - t0 });
+  }), screen]);
+  if (verdict.kind !== "none") return respond(verdict.kind === "self_harm" ? "self-harm" : verdict.kind);
+  const out = readJson(res);
+  // Sal's interview replies never carry phone numbers or addresses; those only come from the checked list.
+  out.reply = out.reply.replace(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}|\b(988|211|2-1-1)\b/g, "your case manager");
+  return json({ ...out, ms: Date.now() - t0 });
 }
 
 // POST /api/plan  { card, transcript, lang }
