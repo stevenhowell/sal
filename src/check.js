@@ -33,6 +33,7 @@ function fill(text, byId, used, missing) {
     const e = byId.get(id);
     if (!e || !FIELDS.includes(field)) { missing.push(`${field}:${id}`); return "[not on the checked list]"; }
     used.add(id);
+    if (field === "address" && (e.referral_required || e.category === "safety")) return "(referral only, so no walk-ins; ask your case manager)";
     const v = e[field];
     if (v == null || v === "") return field === "phone" ? "(no public phone; ask staff)" : "(not listed; ask staff)";
     return String(v);

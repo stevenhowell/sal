@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAL Exam</title>
+<style>
+  :root { --bg: #f5f5f7; --surface: #fff; --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7; --ok: #1e7a3c; --ok-bg: #e3f4e8; --no: #b3261e; --no-bg: #fbe6e4; --accent: #0071e3; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a; --ok: #63d68a; --ok-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --accent: #0a84ff; } }
+  :root[data-theme="dark"] { --bg: #000; --surface: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #38383a; --ok: #63d68a; --ok-bg: #12301c; --no: #ff8a80; --no-bg: #3a1513; --accent: #0a84ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 -apple-system, BlinkMacSystemFont, sans-serif; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; } .big { font-size: 44px; font-weight: 700; margin: 12px 0 0; } .muted { color: var(--muted); }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 8px 0; }
+  summary { padding: 12px 14px; cursor: pointer; display: flex; gap: 10px; align-items: center; min-height: 44px; }
+  .chip { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 8px; }
+  .ok { color: var(--ok); background: var(--ok-bg); } .no { color: var(--no); background: var(--no-bg); }
+  .body { padding: 0 14px 14px; } ul { margin: 6px 0; padding-left: 20px; }
+  .t { font-size: 13px; margin: 4px 0; } .t b { color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SAL Exam</h1>
+  <p class="muted">Claude plays each of the 12 made-up clients from the event's scenario file. Rules written by hand score what SAL did. <a href="/">Back to SAL</a></p>
+  <div id="out"><p class="muted">Loading…</p></div>
+</div>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+fetch("/results.json", { cache: "no-store" }).then(r => { if (!r.ok) throw 0; return r.json(); }).then(d => {
+  document.getElementById("out").innerHTML = `
+    <p class="big">${d.passed} of ${d.total}</p><p class="muted">handled safely · run ${new Date(d.ran_at).toLocaleString()}</p>
+    ${d.results.map(r => `<details ${r.pass ? "" : "open"}><summary><span class="chip ${r.pass ? "ok" : "no"}">${r.pass ? "Pass" : "Miss"}</span><strong>${esc(r.id)}</strong> ${esc(r.title)}<span class="muted">&nbsp;· ${(r.ms / 1000).toFixed(0)} s</span></summary>
+      <div class="body"><ul>${r.checks.map(c => `<li>${c.ok ? "✓" : "✗"} ${esc(c.name)}${c.detail ? ` <span class="muted">(${esc(c.detail)})</span>` : ""}</li>`).join("")}</ul>
+      ${r.plan ? `<p><b>Plan:</b> ${esc(r.plan.client_message)}</p>` : ""}
+      ${r.transcript.map(h => `<p class="t"><b>${h.who === "sal" ? "Sal" : "Client"}:</b> ${esc(h.text)}</p>`).join("")}</div></details>`).join("")}`;
+}).catch(() => { document.getElementById("out").innerHTML = `<p>No exam results yet. Run <code>npm run exam</code> with the server running.</p>`; });
+</script>
+</body>
+</html>
