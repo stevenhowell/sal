@@ -5,13 +5,14 @@ import staff from "../data/ihh-staff.json";
 import scenarios from "../challenges/2-finding-the-right-resource/scenarios/client-scenarios.json";
 import { checkSafety, safetyReply } from "./safety.js";
 import { checkPlan, readingGrade } from "./check.js";
-import { GREETING, INTERVIEW_SYSTEM, TURN_SCHEMA, planSystem, PLAN_SCHEMA } from "./prompts.js";
+import { GREETING, INTERVIEW_SYSTEM, TURN_SCHEMA, planSystem, PLAN_SCHEMA, liveSystem, LIVE_SCHEMA } from "./prompts.js";
 
 const RESOURCES = [...seed.resources, ...added.resources];
 const BY_ID = new Map(RESOURCES.map(r => [r.id, r]));
 const entry = id => BY_ID.get(id);
 // Built once so the cached prefix is byte-identical on every request.
 const PLAN_SYSTEM = planSystem(JSON.stringify(RESOURCES), JSON.stringify(staff.answers));
+const LIVE_SYSTEM = liveSystem(JSON.stringify(RESOURCES));
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { "content-type": "application/json; charset=utf-8" },
@@ -32,7 +33,7 @@ function readJson(res) {
 
 // POST /api/turn  { history: [{who: "sal"|"client", text}], lang }
 async function turn(req, env) {
-  const { history = [], lang = "en" } = await req.json();
+  const { history = [], lang = "en", hint = "" } = await req.json();
   const l = lang.startsWith("es") ? "es" : "en";
   if (!history.length) return json({ reply: GREETING[l], card_updates: [], ready_for_plan: false });
 
@@ -50,6 +51,7 @@ async function turn(req, env) {
   const answers = history.filter(h => h.who === "client").length;
   const summarized = history.some(h => h.who === "sal" && /here's what i heard|esto es lo que escuché/i.test(h.text));
   if (summarized && answers >= 2) messages.push({ role: "system", content: "Sal already read back a summary. If the client agreed (even loosely, like 'yes' or 'that's right'), set ready_for_plan to true and say you'll find their next step now. If they corrected something, record it and set ready_for_plan to true." });
+  else if (hint && answers < 6) messages.push({ role: "system", content: `The live search says this would help decide between programs: "${hint.slice(0, 200)}". Ask it next in your own plain words, unless the client already answered it or it doesn't fit the moment.` });
   else if (answers >= 6) messages.push({ role: "system", content: "You have enough. Read back the summary now, starting with \"Here's what I heard\" (Spanish: \"Esto es lo que escuché\"), and ask if it's right." });
   const t0 = Date.now();
   const res = await claude(env).messages.create({
@@ -79,6 +81,23 @@ async function plan(req, env) {
   const checked = checkPlan(readJson(res), RESOURCES, context);
   if (lang.startsWith("es")) checked.reading_grade = null;
   return json({ ...checked, ms: Date.now() - t0, usage: { cached: res.usage?.cache_read_input_tokens ?? 0 } });
+}
+
+// POST /api/live  { card, lang }  → a checked shortlist while the interview is still going
+async function live(req, env) {
+  const { card = {} } = await req.json();
+  if (!card.needs) return json({ needs: [], next_question: "", searched: RESOURCES.length });
+  const t0 = Date.now();
+  const res = await claude(env).messages.create({
+    model: "claude-haiku-5-5",
+    max_tokens: 4000,
+    system: [{ type: "text", text: LIVE_SYSTEM, cache_control: { type: "ephemeral" } }],
+    output_config: { effort: "low", format: { type: "json_schema", schema: LIVE_SCHEMA } },
+    messages: [{ role: "user", content: `Client card so far:\n${JSON.stringify(card, null, 1)}` }],
+  });
+  const out = readJson(res);
+  const checked = checkPlan({ needs: out.needs }, RESOURCES, JSON.stringify(card));
+  return json({ needs: checked.needs, dropped: checked.check.dropped.length, next_question: out.next_question, searched: RESOURCES.length, ms: Date.now() - t0 });
 }
 
 // POST /api/speak  { text, lang }  → audio/mpeg in Grok's Lumen voice
@@ -122,6 +141,7 @@ export default {
       if (req.method === "POST" && pathname === "/api/turn") return await turn(req, env);
       if (req.method === "POST" && pathname === "/api/plan") return await plan(req, env);
       if (req.method === "POST" && pathname === "/api/speak") return await speak(req, env);
+      if (req.method === "POST" && pathname === "/api/live") return await live(req, env);
       if (req.method === "POST" && pathname === "/api/simclient") return await simclient(req, env);
       if (pathname === "/api/status") return json({ claude: !!env.ANTHROPIC_API_KEY, grok: !!env.XAI_API_KEY, resources: RESOURCES.length });
       return env.ASSETS.fetch(req);

@@ -108,3 +108,31 @@ export const PLAN_SCHEMA = {
     ask_staff: { type: "array", items: { type: "string" } },
   },
 };
+
+export function liveSystem(resourcesJson) {
+  return `You are the live search step of Sal (Safe After Leaving), a helper for clients leaving recuperative care in Orange County, California. While Sal interviews the client, you search a checked list of programs using what is known so far, so a case manager can watch the shortlist form.
+
+Rules:
+- Use only entries on the list and only what the card says. No outside knowledge.
+- For each need on the card, pick the most relevant candidates (at most 4), best first. Give each a verdict: "fits", "does_not_fit", or "unknown" (unknown when the card doesn't yet tell you). Include a does_not_fit candidate only when a careless helper would pick it.
+- "quote" must be copied word for word from that entry's eligibility, description, services, notes, how_to_access, or source_quote.
+- "reason" is one short sentence for staff, in English, with no phone numbers, addresses, or hours.
+- next_question: the single question Sal could ask that would best decide between the candidates (for example the last city lived in, age, whether they have ID, whether family has agreed). Plain words, in English, under 15 words. Empty string if nothing would help or the card already answers it.
+
+The checked list (JSON):
+${resourcesJson}`;
+}
+
+export const LIVE_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["needs", "next_question"],
+  properties: {
+    needs: {
+      type: "array",
+      items: {
+        type: "object", additionalProperties: false, required: ["need", "options"],
+        properties: { need: { type: "string" }, options: { type: "array", items: PLAN_SCHEMA.properties.needs.items.properties.options.items } },
+      },
+    },
+    next_question: { type: "string" },
+  },
+};

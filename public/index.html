@@ -66,11 +66,15 @@
   blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--line); color: var(--muted); font-size: 13px; }
   a { color: var(--accent); }
   h3 { font-size: 14px; margin: 14px 0 6px; }
-  body.client #cardPanel, body.client #staffPanel { display: none !important; }
+  body.client #livePanel, body.client #cardPanel, body.client #staffPanel { display: none !important; }
   body.staff header .seg, body.staff #start, body.staff .composer, body.staff #keyNotice, body.staff #planPanel .row { display: none !important; }
   body.embed .wrap { padding-top: 12px; }
   body.embed header { display: none; }
   .typing { color: var(--muted); font-style: italic; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 1s infinite; vertical-align: middle; }
+  @keyframes pulse { 50% { opacity: .2; } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+  .lopt { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
   @media print { header, .composer, #chatPanel, #staffPanel, .row { display: none !important; } .grid { display: block; } }
 </style>
 </head>
@@ -104,6 +108,10 @@
           <button class="btn" id="send" disabled>Send</button>
         </div>
         <div class="status" id="status"></div>
+      </section>
+      <section class="panel" id="livePanel" hidden>
+        <h2>Live search <span class="meta" id="liveMeta"></span></h2>
+        <div id="live"></div>
       </section>
       <section class="panel" id="staffPanel" hidden>
         <h2>Staff view</h2>
@@ -143,7 +151,7 @@ const VIEW = params.get("view") || "all";   // client | staff | all
 document.body.classList.add(VIEW);
 if (params.get("embed")) document.body.classList.add("embed");
 const channel = "BroadcastChannel" in window ? new BroadcastChannel("sal") : null;
-function publish() { if (channel && VIEW !== "staff") channel.postMessage({ history: S.history, card: S.card, plan: S.plan, alert: $("alert").hidden ? "" : $("alert").textContent, lang: S.lang }); }
+function publish() { if (channel && VIEW !== "staff") channel.postMessage({ history: S.history, card: S.card, plan: S.plan, live: S.live, searching: S.searching, answers: S.history.filter(h => h.who === "client").length, alert: $("alert").hidden ? "" : $("alert").textContent, lang: S.lang }); }
 
 function setStatus(t) { $("status").textContent = t || ""; }
 function seg(id, attr, val) { document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute("aria-pressed", b.dataset[attr] === val)); }
@@ -230,7 +238,8 @@ function listen() {
 // ---- conversation ----
 async function start() {
   audio.pause(); speechSynthesis.cancel();
-  Object.assign(S, { history: [], card: {}, stopped: false, plan: null });
+  Object.assign(S, { history: [], card: {}, stopped: false, plan: null, live: null, searching: false, liveRun: (S.liveRun || 0) + 1 });
+  $("livePanel").hidden = true;
   $("alert").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true;
   renderCard(); $("start").textContent = "Start over";
   await step();
@@ -248,10 +257,11 @@ async function send() {
 async function step() {
   S.busy = true; setInputs(false); setStatus("Sal is thinking…");
   try {
-    const r = await api("/api/turn", { history: S.history, lang: S.lang });
+    const r = await api("/api/turn", { history: S.history, lang: S.lang, hint: S.live?.next_question || "" });
     for (const u of r.card_updates || []) S.card[u.field] = u.value;
     S.history.push({ who: "sal", text: r.reply });
     renderChat(); renderCard(); setStatus("");
+    if ((r.card_updates || []).length && S.card.needs && !r.safety) liveSearch();
     if (r.safety) {
       $("alert").textContent = r.safety.alert; $("alert").hidden = false;
       if (r.safety.stop) { S.stopped = true; S.history = S.history.slice(-2); renderChat(); S.card = {}; renderCard(); }
@@ -262,11 +272,39 @@ async function step() {
   S.busy = false; setInputs(true);
 }
 
+// Searches the checked list again with the profile so far. Runs in the background; never blocks the conversation.
+async function liveSearch() {
+  if (S.searching) { S.liveAgain = true; return; }
+  S.searching = true; renderLive();
+  const run = S.liveRun;
+  try {
+    const r = await api("/api/live", { card: S.card, lang: S.lang });
+    if (run === S.liveRun && !S.plan) { S.live = { ...r, at: S.history.filter(h => h.who === "client").length }; }
+  } catch (e) { if (run === S.liveRun) S.live = { ...(S.live || {}), error: e.message }; }
+  S.searching = false;
+  if (run !== S.liveRun) return;
+  renderLive();
+  if (S.liveAgain && !S.plan) { S.liveAgain = false; liveSearch(); }
+}
+
+function renderLive(d = S) {
+  const L = d.live;
+  if (!L && !d.searching) { $("livePanel").hidden = true; return; }
+  $("livePanel").hidden = false;
+  $("liveMeta").innerHTML = d.searching ? `<span class="pulse"></span>Searching ${L?.searched || 41} programs…` : L ? `${L.searched} programs searched after answer ${L.at}${L.ms ? ` · ${(L.ms / 1000).toFixed(1)} s` : ""}` : "";
+  if (!L) { $("live").innerHTML = `<p class="empty">Starting the first search…</p>`; return; }
+  $("live").innerHTML = (L.error ? `<p class="meta">Last search failed: ${esc(L.error)}</p>` : "") +
+    (L.needs || []).map(n => `<h3>${esc(n.need)}</h3>${n.options.length ? n.options.map(o => `<div class="lopt"><span class="chip ${o.verdict}">${VERDICT[o.verdict]}</span><span><strong>${esc(o.entry.name)}</strong> <span class="meta">${esc(o.reason)}</span></span></div>`).join("") : `<p class="empty">Nothing on the list yet.</p>`}`).join("") +
+    (L.next_question ? `<p class="meta">Would help decide: “${esc(L.next_question)}”</p>` : "") +
+    (L.dropped ? `<p class="meta">${L.dropped} suggestion${L.dropped > 1 ? "s" : ""} thrown out by the checker.</p>` : "");
+  publish();
+}
+
 async function makePlan() {
   setStatus("Finding the next step on the checked list…");
   const transcript = S.history.map(h => (h.who === "sal" ? "Sal: " : "Client: ") + h.text).join("\n");
   const p = await api("/api/plan", { card: S.card, transcript, lang: S.lang });
-  S.plan = p; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
+  S.plan = p; S.liveRun++; S.searching = false; $("livePanel").hidden = true; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
   S.lastSay = say(p.client_message);
 }
 
@@ -339,6 +377,7 @@ if (VIEW === "staff") {
   channel && (channel.onmessage = e => {
     const d = e.data; S.history = d.history; S.card = d.card; S.plan = d.plan; S.lang = d.lang;
     renderChat(); renderCard();
+    if (!d.plan) renderLive(d); else $("livePanel").hidden = true;
     if (d.alert) { $("alert").textContent = d.alert; $("alert").hidden = false; } else $("alert").hidden = true;
     if (d.plan) renderPlan(); else { $("planPanel").hidden = true; $("staffPanel").hidden = true; }
   });
