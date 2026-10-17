@@ -100,6 +100,10 @@ async function plan(req, env) {
   });
   const checked = checkPlan(readJson(res), RESOURCES, context);
   if (lang.startsWith("es")) checked.reading_grade = null;
+  // Always on the packet's last page; read from the entries, never typed.
+  checked.safety_numbers = ["national-domestic-violence-hotline", "988-suicide-and-crisis-lifeline", "211-orange-county"].map(id => {
+    const e = entry(id); return { id, name: e.name, phone: e.phone, hours: e.hours, verified_date: e.verified_date, source_url: e.source_url };
+  });
   return json({ ...checked, ms: Date.now() - t0, usage: { cached: res.usage?.cache_read_input_tokens ?? 0 } });
 }
 

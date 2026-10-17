@@ -66,11 +66,23 @@
   blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--line); color: var(--muted); font-size: 13px; }
   a { color: var(--accent); }
   h3 { font-size: 14px; margin: 14px 0 6px; }
-  body.client #livePanel, body.client #cardPanel, body.client #staffPanel { display: none !important; }
+  body.client #livePanel, body.client #cardPanel, body.client #staffPanel, body.client #textPanel { display: none !important; }
   body.staff header .seg, body.staff #start, body.staff .composer, body.staff #keyNotice, body.staff #planPanel .row { display: none !important; }
   body.embed .wrap { padding-top: 12px; }
   body.embed header { display: none; }
   .typing { color: var(--muted); font-style: italic; }
+  .call { text-align: center; padding: 8px 0 16px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  .avatar { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center; font-weight: 700; letter-spacing: .06em; color: #fff; background: linear-gradient(160deg, #5e8bff, #2d5bd8); }
+  .call.live .avatar { box-shadow: 0 0 0 6px color-mix(in srgb, #34c759 35%, transparent); }
+  .callname { font-size: 22px; font-weight: 600; } .callstate { color: var(--muted); min-height: 20px; }
+  .callbtns { display: flex; justify-content: center; gap: 22px; margin-top: 12px; }
+  .round { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+  .round.green { background: #34c759; border-color: #34c759; color: #fff; } .round.red { background: #ff3b30; border-color: #ff3b30; color: #fff; }
+  .round[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+  .round:active { opacity: .7; }
+  body.staff .call { display: none; }
+  .phonebox { background: var(--bg); border: 1px solid var(--line); border-radius: 22px; padding: 16px; max-width: 340px; }
+  .bubble { background: #e9e9eb; color: #1d1d1f; border-radius: 18px; padding: 10px 14px; font-size: 15px; white-space: pre-wrap; }
   .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 1s infinite; vertical-align: middle; }
   @keyframes pulse { 50% { opacity: .2; } }
   @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
@@ -100,6 +112,16 @@
   <div class="grid">
     <div>
       <section class="panel" id="chatPanel">
+        <div class="call" id="call">
+          <div class="avatar" aria-hidden="true">SAL</div>
+          <div class="callname">Sal</div>
+          <div class="callstate" id="callState">Safe After Leaving</div>
+          <div class="callbtns">
+            <button class="round green" id="callBtn" title="Call Sal">Call</button>
+            <button class="round" id="muteBtn" hidden title="Mute your microphone">Mute</button>
+            <button class="round red" id="hangBtn" hidden title="End the call">End</button>
+          </div>
+        </div>
         <h2>Conversation</h2>
         <div id="chat"><p class="empty">Press Start, then talk or type. Every client in this demo is made up.</p></div>
         <div class="composer">
@@ -113,8 +135,19 @@
         <h2>Live search <span class="meta" id="liveMeta"></span></h2>
         <div id="live"></div>
       </section>
+      <section class="panel" id="textPanel" hidden>
+        <h2>Text message draft</h2>
+        <div class="phonebox"><div class="bubble" id="smsText"></div></div>
+        <p class="meta" id="smsMeta"></p>
+        <div class="row">
+          <button class="btn" disabled title="Prototype: nothing is sent">Send text</button>
+          <button class="btn" id="copySms">Copy</button>
+        </div>
+        <p class="meta">Sending is off in this prototype. The event's rules say to draft messages, not send them. Copy the text into your own phone.</p>
+      </section>
       <section class="panel" id="staffPanel" hidden>
         <h2>Staff view</h2>
+        <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn primary" id="openPacket">Discharge packet</button></div>
         <div id="staff"></div>
       </section>
     </div>
@@ -229,8 +262,12 @@ function listen() {
     }
     $("text").value = (finalText + " " + interim).trim();
   };
-  rec.onerror = e => setStatus(e.error === "not-allowed" ? "Microphone blocked. Allow it in the browser, or type instead." : "Didn't catch that (" + e.error + "). Try again or type.");
-  rec.onend = () => { rec = null; $("talk").classList.remove("listening"); $("talk").textContent = "Talk"; if ($("text").value.trim()) send(); };
+  rec.onerror = e => (e.error === "no-speech" && S.call?.on) ? setStatus("Listening… say something, or press End.") : setStatus(e.error === "not-allowed" ? "Microphone blocked. Allow it in the browser, or type instead." : "Didn't catch that (" + e.error + "). Try again or type.");
+  rec.onend = () => {
+    rec = null; $("talk").classList.remove("listening"); $("talk").textContent = "Talk";
+    if ($("text").value.trim()) send();
+    else if (S.call?.on) setTimeout(() => maybeListen(S.session), 300);   // on a call, keep listening through silence
+  };
   rec.start();
   $("talk").classList.add("listening"); $("talk").textContent = "Done";
   setStatus("Listening…");
@@ -241,7 +278,7 @@ async function start() {
   audio.pause(); speechSynthesis.cancel();
   Object.assign(S, { history: [], card: {}, stopped: false, plan: null, live: null, searching: false, busy: false, liveRun: (S.liveRun || 0) + 1, session: (S.session || 0) + 1 });
   $("livePanel").hidden = true;
-  $("alert").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true;
+  $("alert").hidden = true; $("planPanel").hidden = true; $("staffPanel").hidden = true; $("textPanel").hidden = true;
   renderCard(); $("start").textContent = "Start over";
   await step();
 }
@@ -270,6 +307,7 @@ async function step() {
       if (r.safety.stop) { S.stopped = true; S.history = S.history.slice(-2); renderChat(); S.card = {}; renderCard(); }
     }
     S.lastSay = say(r.reply);
+    S.lastSay.then(() => setTimeout(() => maybeListen(session), 250));
     if (r.ready_for_plan) { await S.lastSay; if (session === S.session) await makePlan(session); }
   } catch (e) { if (session === S.session) setStatus(e.message); }
   if (session !== S.session) return;
@@ -311,6 +349,11 @@ async function makePlan(session = S.session) {
   if (session !== S.session) return;
   S.plan = p; S.liveRun++; S.searching = false; $("livePanel").hidden = true; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
   S.lastSay = say(p.client_message);
+  if (S.call?.on) S.lastSay.then(async () => {
+    if (!S.call?.on || session !== S.session) return;
+    await say(S.lang === "es" ? "Tu administrador de caso tiene tu paquete con todo esto. Cuídate." : "Your case manager has a packet with all of this. Take care.");
+    hangUp(false);
+  });
 }
 
 function renderPlan() {
@@ -337,8 +380,25 @@ function renderPlan() {
     ${c.removed_digits.length ? `<h3>Numbers Claude wrote itself (removed)</h3><p>${c.removed_digits.map(esc).join(", ")}</p>` : ""}
     ${c.missing_placeholders.length ? `<h3>Facts not on the list (replaced)</h3><p>${c.missing_placeholders.map(esc).join(", ")}</p>` : ""}`;
   $("staffPanel").hidden = false;
+  const sms = p.client_message;
+  const unicode = /[^\x00-\x7F\u00A1\u00BF\u00D1\u00F1\u00E0\u00E8\u00E9\u00EC\u00F2\u00F9\u00C7\u00DC\u00FC\u00C4\u00E4\u00D6\u00F6\u00C5\u00E5]/.test(sms);
+  const per = unicode ? 70 : 160;
+  $("smsText").textContent = sms;
+  const phone = S.card.phone || "";
+  $("smsMeta").textContent = `${sms.length} characters · ${Math.ceil(sms.length / per)} text${Math.ceil(sms.length / per) > 1 ? "s" : ""}` +
+    (phone ? ` · client's phone: ${phone}` : " · the client's phone wasn't recorded") + (/no phone|none/i.test(phone) ? " (a printed packet may work better)" : "");
+  $("textPanel").hidden = false;
   publish();
 }
+
+// ---- discharge packet: opens in a new window, which asks for the plan when it's ready ----
+let packetWin = null;
+$("openPacket").onclick = () => { packetWin = window.open("/packet.html", "sal-packet"); };
+window.addEventListener("message", e => {
+  if (e.origin === location.origin && e.data?.type === "packet-ready" && e.source === packetWin && S.plan)
+    packetWin.postMessage({ type: "packet", plan: S.plan, card: S.card, lang: S.lang }, location.origin);
+});
+$("copySms").onclick = async () => { try { await navigator.clipboard.writeText(S.plan?.client_message || ""); $("smsMeta").textContent += " · copied"; } catch { $("smsMeta").textContent += " · couldn't copy; select the text instead"; } };
 
 // ---- controls ----
 $("start").onclick = start;
@@ -356,12 +416,62 @@ $("copyPlan").onclick = async () => {
 document.querySelectorAll("#langSeg button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; seg("langSeg", "lang", S.lang); document.documentElement.lang = S.lang; });
 document.querySelectorAll("#voiceSeg button").forEach(b => b.onclick = () => { S.voice = b.dataset.voice; seg("voiceSeg", "voice", S.voice); if (S.voice === "off") { audio.pause(); speechSynthesis.cancel(); } });
 
+// ---- phone call: ring, pick up, hands-free ----
+let actx = null;
+function ring(times = 2) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume();
+    const g = actx.createGain(); g.gain.value = 0; g.connect(actx.destination);
+    for (const f of [440, 480]) { const o = actx.createOscillator(); o.frequency.value = f; o.connect(g); o.start(); o.stop(actx.currentTime + times * 4); }
+    for (let i = 0; i < times; i++) { g.gain.setValueAtTime(0.08, actx.currentTime + i * 4); g.gain.setValueAtTime(0, actx.currentTime + i * 4 + 2); }
+  } catch {}
+  return new Promise(r => setTimeout(r, times * 4000 - 1500));   // US ringback: 2 s on, 4 s off; Sal picks up on the second ring
+}
+function callUI() {
+  const on = !!S.call?.on;
+  $("call").classList.toggle("live", on && S.call.connected);
+  $("callBtn").hidden = on; $("muteBtn").hidden = !on || !S.call.connected; $("hangBtn").hidden = !on;
+  $("muteBtn").setAttribute("aria-pressed", !!S.call?.muted);
+}
+function tick() {
+  if (!S.call?.on || !S.call.connected) return;
+  const t = Math.floor((Date.now() - S.call.t0) / 1000);
+  $("callState").textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}${S.call.muted ? " · muted" : ""}`;
+}
+async function startCall(auto = false) {
+  if (S.call?.on) return;
+  S.call = { on: true, connected: false, muted: false, auto };
+  $("callState").textContent = S.lang === "es" ? "Llamando…" : "Calling…"; callUI();
+  await ring(2);
+  if (!S.call?.on) return;
+  S.call.connected = true; S.call.t0 = Date.now(); S.call.timer = setInterval(tick, 500); tick(); callUI();
+  await start();
+}
+function hangUp(byUser = true) {
+  if (!S.call?.on) return;
+  const t = S.call.t0 ? Math.floor((Date.now() - S.call.t0) / 1000) : 0;
+  clearInterval(S.call.timer); S.call.on = false; if (rec) rec.abort?.();
+  if (byUser) { S.auto++; audio.pause(); speechSynthesis.cancel(); }
+  $("callState").textContent = (S.lang === "es" ? "Llamada terminada · " : "Call ended · ") + `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; callUI();
+  if (byUser && !S.plan && !S.stopped && S.card.needs) makePlan().catch(e => setStatus(e.message));
+}
+function maybeListen(session) {
+  if (!S.call?.on || S.call.muted || S.call.auto || !Recognition || rec) return;
+  if (session !== S.session || S.stopped || S.plan || S.busy) return;
+  listen();
+}
+$("callBtn").onclick = () => startCall(false);
+$("hangBtn").onclick = () => hangUp(true);
+$("muteBtn").onclick = () => { S.call.muted = !S.call.muted; if (S.call.muted && rec) rec.abort?.(); callUI(); tick(); if (!S.call.muted) maybeListen(S.session); };
+
 // ---- demo autoplay: Claude plays a made-up client from the event's scenario file ----
 const CLIENT_VOICE = { C01: "rex", C02: "ara", C03: "leo", C10: "ara" };
 async function autoplay(scenario, lang) {
   S.lang = lang; seg("langSeg", "lang", lang);
   S.auto = (S.auto || 0) + 1; const run = S.auto;
-  await start();
+  if (S.call?.on) hangUp(false);
+  await startCall(true);
+  if (run !== S.auto) return;
   for (let i = 0; i < 14 && run === S.auto && !S.plan && !S.stopped; i++) {
     await S.lastSay;
     if (run !== S.auto) return;
@@ -375,7 +485,7 @@ async function autoplay(scenario, lang) {
   }
   $("text").placeholder = "Or type an answer";
 }
-window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "autoplay") autoplay(e.data.scenario, e.data.lang); if (e.data?.type === "voice") { S.voice = e.data.voice; seg("voiceSeg", "voice", S.voice); } if (e.data?.type === "stop") { S.auto++; audio.pause(); speechSynthesis.cancel(); } });
+window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "autoplay") autoplay(e.data.scenario, e.data.lang); if (e.data?.type === "voice") { S.voice = e.data.voice; seg("voiceSeg", "voice", S.voice); } if (e.data?.type === "stop") { if (S.call?.on) hangUp(true); else { S.auto++; audio.pause(); speechSynthesis.cancel(); } } });
 
 if (VIEW === "staff") {
   $("chat").innerHTML = `<p class="empty">Waiting for the client's tablet.</p>`;
@@ -385,7 +495,7 @@ if (VIEW === "staff") {
     renderChat(); renderCard();
     if (!d.plan) renderLive(d); else $("livePanel").hidden = true;
     if (d.alert) { $("alert").textContent = d.alert; $("alert").hidden = false; } else $("alert").hidden = true;
-    if (d.plan) renderPlan(); else { $("planPanel").hidden = true; $("staffPanel").hidden = true; }
+    if (d.plan) renderPlan(); else { $("planPanel").hidden = true; $("staffPanel").hidden = true; $("textPanel").hidden = true; }
   });
   channel && channel.postMessage({ type: "hello" });   // opened late: ask the tablet for where things stand
 }

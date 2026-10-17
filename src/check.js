@@ -73,6 +73,7 @@ export function checkPlan(plan, resources, context) {
           id: e.id, name: e.name, phone: e.phone, address: e.referral_required || e.category === "safety" ? null : e.address,
           city: e.city, hours: e.hours, website: e.website, source_url: e.source_url, verified_date: e.verified_date,
           confidence: e.confidence, referral_required: e.referral_required, notes: e.notes,
+          description: e.description, how_to_access: e.how_to_access, languages: e.languages, cost: e.cost,
         },
       });
     }

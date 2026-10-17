@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discharge Packet</title>
+<style>
+  :root { --text: #1d1d1f; --muted: #5f5f66; --line: #c9c9cf; --accent: #2d5bd8; --soft: #f2f5fc; --warn: #8a5a00; --warn-bg: #fff2d6; --bg: #e9e9ee; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  .bar { position: sticky; top: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); z-index: 2; }
+  .bar .grow { flex: 1; } .bar .meta { color: var(--muted); font-size: 14px; }
+  .btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font: inherit; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn:active { opacity: .7; }
+  label.check { display: flex; gap: 8px; align-items: center; min-height: 44px; cursor: pointer; }
+  label.check input { width: 20px; height: 20px; }
+  .page { width: 8.5in; min-height: 11in; margin: 18px auto; background: #fff; padding: 0.7in 0.75in; box-shadow: 0 1px 6px rgba(0,0,0,.12); position: relative; }
+  @media screen and (max-width: 860px) { .page { width: auto; min-height: 0; margin: 12px; padding: 24px 18px; } }
+  .draft { position: absolute; top: 0.3in; right: 0.75in; background: var(--warn-bg); color: var(--warn); font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 6px; letter-spacing: .04em; }
+  .reviewed .draft { display: none; }
+  .brand { display: flex; align-items: baseline; gap: 10px; color: var(--accent); font-weight: 700; letter-spacing: .04em; }
+  .brand span { color: var(--muted); font-weight: 400; letter-spacing: 0; font-size: 14px; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 18px 0 6px; } h2 { font-size: 22px; margin: 26px 0 10px; } h3 { font-size: 18px; margin: 18px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  ol.steps { padding: 0; margin: 0; list-style: none; counter-reset: s; }
+  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; padding: 14px 0; border-top: 1px solid var(--line); font-size: 19px; }
+  ol.steps li::before { content: counter(s); width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; }
+  ul.bring { list-style: none; padding: 0; margin: 0; } ul.bring li { padding: 6px 0 6px 34px; position: relative; font-size: 17px; }
+  ul.bring li::before { content: ""; position: absolute; left: 0; top: 8px; width: 20px; height: 20px; border: 2px solid var(--text); border-radius: 4px; }
+  .prog { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 10px 0; break-inside: avoid; }
+  .prog .name { font-weight: 700; font-size: 18px; } .prog .phone { font-size: 24px; font-weight: 700; margin: 6px 0 2px; }
+  .tag { display: inline-block; font-size: 13px; font-weight: 600; border-radius: 6px; padding: 1px 8px; margin: 4px 6px 0 0; background: var(--soft); }
+  .tag.warn { background: var(--warn-bg); color: var(--warn); }
+  .small { color: var(--muted); font-size: 13px; word-break: break-word; }
+  .safety { background: var(--soft); border-radius: 12px; padding: 16px 18px; }
+  .safety .row { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 18px; } .safety .row:first-of-type { border-top: 0; }
+  .safety .num { font-weight: 700; }
+  .lines div { border-bottom: 1px solid var(--line); height: 34px; }
+  .sign { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-top: 26px; } .sign div { border-top: 1px solid var(--text); padding-top: 4px; font-size: 13px; color: var(--muted); }
+  .foot { position: absolute; bottom: 0.4in; left: 0.75in; right: 0.75in; color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; }
+  @media screen and (max-width: 860px) { .foot { position: static; margin-top: 24px; } }
+  .empty { color: var(--muted); text-align: center; padding: 60px 16px; }
+  @media print {
+    @page { size: letter; margin: 0; }
+    body { background: #fff; } .bar { display: none; }
+    .page { margin: 0; box-shadow: none; page-break-after: always; width: 8.5in; height: 11in; overflow: hidden; }
+    .page:last-child { page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <strong>Discharge packet</strong><span class="meta" id="barMeta"></span>
+  <span class="grow"></span>
+  <label class="check"><input type="checkbox" id="reviewed"> Reviewed by case manager</label>
+  <button class="btn primary" id="pdf">Save as PDF</button>
+</div>
+<div id="out"><p class="empty">Waiting for the plan from SAL…</p></div>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const T = {
+  en: { title: "Your next steps", sub: "Made with you today. Your case manager checks everything before you act on it.", today: "What to do first", bring: "What to bring", progs: "Places that may help", referral: "Your case manager needs to start this. Don't go on your own.", callfirst: "Call first: this information may have changed.", ask: "Ask your case manager to check if this fits you.", checked: "Information checked", hours: "Hours", safe: "If you need help right away", e911: "Emergency", e911n: "9-1-1", notes: "Notes from your case manager", by: "Case manager", date: "Date", draft: "DRAFT · not yet reviewed", made: "Made by SAL (Safe After Leaving), a prototype. Program details come from a public list checked on the date shown.", page: "Page" },
+  es: { title: "Tus próximos pasos", sub: "Hecho contigo hoy. Tu administrador de caso revisa todo antes de que actúes.", today: "Qué hacer primero", bring: "Qué llevar", progs: "Lugares que pueden ayudar", referral: "Tu administrador de caso tiene que empezar esto. No vayas por tu cuenta.", callfirst: "Llama primero: esta información pudo cambiar.", ask: "Pide a tu administrador de caso que revise si esto te sirve.", checked: "Información revisada", hours: "Horario", safe: "Si necesitas ayuda ya", e911: "Emergencia", e911n: "9-1-1", notes: "Notas de tu administrador de caso", by: "Administrador de caso", date: "Fecha", draft: "BORRADOR · sin revisar", made: "Hecho por SAL (Safe After Leaving), un prototipo. Los datos de los programas vienen de una lista pública revisada en la fecha indicada.", page: "Página" },
+};
+const fmtDate = (d, lang) => new Date(d + "T12:00:00").toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { year: "numeric", month: "long", day: "numeric" });
+
+function render({ plan, lang }) {
+  const t = T[lang === "es" ? "es" : "en"];
+  document.documentElement.lang = lang;
+  const today = new Date().toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { year: "numeric", month: "long", day: "numeric" });
+  document.getElementById("barMeta").textContent = `· ${today}`;
+  // Programs: only options that fit or still need checking; never the ones that don't fit.
+  const seen = new Set();
+  const progs = plan.needs.flatMap(n => n.options.filter(o => o.verdict !== "does_not_fit").map(o => ({ ...o, need: n.need })))
+    .filter(o => !seen.has(o.entry.id) && seen.add(o.entry.id));
+  const foot = n => `<div class="foot"><span>${esc(t.made)}</span><span>${t.page} ${n}</span></div>`;
+  const prog = o => `<div class="prog">
+      <div class="name">${esc(o.entry.name)}</div>
+      ${o.entry.description ? `<div class="small" style="font-size:14px;color:var(--text)">${esc(o.entry.description.split(/(?<=\.)\s/)[0])}</div>` : ""}
+      ${o.entry.phone ? `<div class="phone">${esc(o.entry.phone)}</div>` : ""}
+      ${o.entry.hours ? `<div>${t.hours}: ${esc(o.entry.hours)}</div>` : ""}
+      ${o.entry.address && !o.entry.referral_required ? `<div>${esc(o.entry.address)}</div>` : ""}
+      <div>${o.entry.referral_required ? `<span class="tag">${t.referral}</span>` : ""}${o.verdict === "unknown" ? `<span class="tag">${t.ask}</span>` : ""}${o.entry.confidence !== "high" ? `<span class="tag warn">${t.callfirst}</span>` : ""}</div>
+      <div class="small">${t.checked}: ${esc(fmtDate(o.entry.verified_date, lang))} · ${esc(o.entry.source_url)}</div>
+    </div>`;
+  const half = Math.ceil(progs.length / 2);
+  const pages = [
+    `<section class="page"><span class="draft">${t.draft}</span>
+      <div class="brand">SAL <span>Safe After Leaving</span></div>
+      <h1>${t.title}</h1><p class="sub">${esc(today)} · ${t.sub}</p>
+      <h2>${t.today}</h2><ol class="steps">${plan.today_steps.map(x => `<li><span>${esc(x)}</span></li>`).join("")}</ol>
+      ${plan.bring.length ? `<h2>${t.bring}</h2><ul class="bring">${plan.bring.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+      ${foot(1)}</section>`,
+    ...(progs.length ? [progs.slice(0, Math.min(half, 4)), progs.slice(Math.min(half, 4))].filter(g => g.length).map((g, i) =>
+      `<section class="page"><span class="draft">${t.draft}</span><h2>${t.progs}</h2>${g.map(prog).join("")}${foot(i + 2)}</section>`) : []),
+  ];
+  const n = pages.length + 1;
+  pages.push(`<section class="page"><span class="draft">${t.draft}</span>
+      <h2>${t.safe}</h2>
+      <div class="safety"><div class="row"><span>${t.e911}</span><span class="num">${t.e911n}</span></div>
+      ${(plan.safety_numbers || []).map(x => `<div class="row"><span>${esc(x.name)}${x.hours ? ` · ${esc(x.hours)}` : ""}</span><span class="num">${esc(x.phone)}</span></div>`).join("")}</div>
+      <h2>${t.notes}</h2><div class="lines">${"<div></div>".repeat(8)}</div>
+      <div class="sign"><div>${t.by}</div><div>${t.date}</div></div>
+      ${foot(n)}</section>`);
+  document.getElementById("out").innerHTML = pages.join("");
+}
+
+document.getElementById("reviewed").onchange = e => document.body.classList.toggle("reviewed", e.target.checked);
+document.getElementById("pdf").onclick = () => window.print();
+window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "packet") render(e.data); });
+if (window.opener) window.opener.postMessage({ type: "packet-ready" }, location.origin);
+// packet.html#sample=C01 builds a packet for one of the exam's made-up clients (for checking the layout).
+const sample = location.hash.match(/^#sample=(C\d\d)$/);
+if (sample) (async () => {
+  const d = await (await fetch("/results.json", { cache: "no-store" })).json();
+  const r = d.results.find(x => x.id === sample[1]);
+  if (!r?.card) return;
+  const plan = await (await fetch("/api/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ card: r.card, transcript: "", lang: r.lang }) })).json();
+  render({ plan, lang: r.lang }); document.title = "Discharge Packet"; document.body.dataset.ready = "1";
+})();
+</script>
+</body>
+</html>

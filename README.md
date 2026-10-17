@@ -15,8 +15,10 @@ A client leaving recuperative care has practical questions: where do I sleep, wh
 
 Two screens showing one conversation:
 
-- **Client's tablet.** Sal, a voice assistant, asks one short question at a time (English or Spanish), reads its replies aloud, and ends with the client's plan for today in plain words. The client never sees the profile.
+- **Client's tablet: a call with Sal.** The client presses Call, hears it ring, and Sal picks up. It's a hands-free voice conversation: Sal asks one short question at a time (English or Spanish), and the mic reopens each time Sal finishes speaking. At the end Sal reads the client's plan for today, says goodbye, and hangs up. The client never sees the profile.
 - **Case manager's screen.** The profile fills in as the client talks. After every answer, SAL searches the 41 checked programs again and the shortlist updates live. The search also suggests Sal's next deciding question, for example age, because several programs depend on it. At the end, staff see every option marked *fits*, *doesn't fit* or *unknown*, the exact quote from the program's listing, the date it was checked, its confidence, and a link to the source.
+- **Discharge packet (PDF).** One click builds a printable packet in the client's language: today's steps, what to bring, each program with its phone, hours, how to get in and the date it was checked, a page of safety numbers read from the data, and lines for case manager notes and sign-off. It's marked DRAFT until the case manager ticks "Reviewed". [Sample packet](docs/sample-discharge-packet.pdf) for a made-up client.
+- **Text message draft.** The plan as a text, shown the way it would arrive on the client's phone, with its length. Sending is switched off: the event's rules say to draft messages, not send them.
 
 Open `/demo.html` to watch a whole interview play by itself: Claude plays a made-up client from the event's scenario file while Sal interviews them.
 
@@ -76,6 +78,9 @@ node eval/run.mjs --personas   # 7 hard clients: one-word answers, anger, switch
 | Live search while the client talks | Working |
 | Plan with sources, checker and reading level | Working |
 | Lumen voice | Working with an xAI key; browser voice otherwise |
+| Call with Sal (ring, pick up, hands-free) | Working in the browser. **Not a real phone number:** a phone line would need a calling service such as Twilio |
+| Discharge packet PDF | Working (Save as PDF from the browser) |
+| Text message | **Draft only.** Nothing is sent, per the event rules |
 | Program data | Real: the event's 40-entry seed list (checked Oct 13) plus one entry we added, the National Domestic Violence Hotline, from its own site on Oct 17 |
 | "Staff called to the room" | **Mocked.** Nothing is sent to anyone |
 | Clients | **Made up.** The 12 scenarios from the event repo; Claude plays them in the demo and exam |
