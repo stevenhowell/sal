@@ -285,8 +285,8 @@ show(location.hash.slice(1) || "home", false);
     clearInterval(count.t);
     const go = () => {
       const k = Math.min(1, (performance.now() - t0 - 900) / 1500);
-      el.textContent = k < 0 ? 41 : Math.round(41 - 38 * (1 - Math.pow(1 - k, 3)));
-      lbl.textContent = k < 1 ? "programs checked" : "good matches";
+      const v = k < 0 ? 41 : Math.round(41 - 38 * (1 - Math.pow(1 - k, 3)));
+      el.textContent = v; lbl.textContent = v > 3 ? "programs checked" : "good matches";
       if (k >= 1 || !scenes[1].classList.contains("on")) clearInterval(count.t);
     };
     el.textContent = 41; lbl.textContent = "programs checked"; count.t = setInterval(go, 40);
