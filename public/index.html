@@ -66,6 +66,11 @@
   blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--line); color: var(--muted); font-size: 13px; }
   a { color: var(--accent); }
   h3 { font-size: 14px; margin: 14px 0 6px; }
+  body.client #cardPanel, body.client #staffPanel { display: none !important; }
+  body.staff header .seg, body.staff #start, body.staff .composer, body.staff #keyNotice, body.staff #planPanel .row { display: none !important; }
+  body.embed .wrap { padding-top: 12px; }
+  body.embed header { display: none; }
+  .typing { color: var(--muted); font-style: italic; }
   @media print { header, .composer, #chatPanel, #staffPanel, .row { display: none !important; } .grid { display: block; } }
 </style>
 </head>
@@ -106,7 +111,7 @@
       </section>
     </div>
     <div>
-      <section class="panel">
+      <section class="panel" id="cardPanel">
         <h2>Who the client is</h2>
         <dl id="card"><p class="empty">Fills in as the client talks.</p></dl>
       </section>
@@ -133,6 +138,12 @@ const LABELS = { needs: "Needs", leaving: "Leaving", getting_around: "Getting ar
 const VERDICT = { fits: "Fits", does_not_fit: "Doesn't fit", unknown: "Unknown" };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const audio = new Audio();
+const params = new URLSearchParams(location.search);
+const VIEW = params.get("view") || "all";   // client | staff | all
+document.body.classList.add(VIEW);
+if (params.get("embed")) document.body.classList.add("embed");
+const channel = "BroadcastChannel" in window ? new BroadcastChannel("sal") : null;
+function publish() { if (channel && VIEW !== "staff") channel.postMessage({ history: S.history, card: S.card, plan: S.plan, alert: $("alert").hidden ? "" : $("alert").textContent, lang: S.lang }); }
 
 function setStatus(t) { $("status").textContent = t || ""; }
 function seg(id, attr, val) { document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute("aria-pressed", b.dataset[attr] === val)); }
@@ -154,10 +165,12 @@ function renderChat() {
     c.appendChild(d);
   }
   c.scrollTop = c.scrollHeight;
+  publish();
 }
 
 function renderCard() {
   const keys = Object.keys(S.card);
+  setTimeout(publish);
   $("card").innerHTML = keys.length ? keys.map(k => `<dt>${esc(LABELS[k] || k)}</dt><dd>${esc(S.card[k])}</dd>`).join("") : `<p class="empty">Fills in as the client talks.</p>`;
 }
 
@@ -169,21 +182,25 @@ function setInputs(on) {
 }
 
 // ---- voice out ----
-async function say(text) {
+function say(text, voice = "lumen") {
   audio.pause(); speechSynthesis.cancel();
-  if (S.voice === "off" || !text) return;
-  if (S.voice === "grok" && S.keys.grok) {
-    try {
-      const r = await fetch("/api/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang: S.lang }) });
-      if (!r.ok) throw new Error((await r.json()).error);
-      audio.src = URL.createObjectURL(await r.blob());
-      await audio.play();
-      return;
-    } catch (e) { setStatus("Lumen voice unavailable (" + e.message + "). Using the browser voice."); }
-  }
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = S.lang === "es" ? "es-MX" : "en-US";
-  speechSynthesis.speak(u);
+  if (S.voice === "off" || !text || VIEW === "staff") return Promise.resolve();
+  return new Promise(async done => {
+    if (S.voice === "grok" && S.keys.grok) {
+      try {
+        const r = await fetch("/api/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, lang: S.lang, voice }) });
+        if (!r.ok) throw new Error((await r.json()).error);
+        audio.src = URL.createObjectURL(await r.blob());
+        audio.onended = done; audio.onerror = done; audio.onpause = done;
+        await audio.play();
+        return;
+      } catch (e) { setStatus("Lumen voice unavailable (" + e.message + "). Using the browser voice."); }
+    }
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = S.lang === "es" ? "es-MX" : "en-US";
+    u.onend = done; u.onerror = done;
+    speechSynthesis.speak(u);
+  });
 }
 
 // ---- voice in ----
@@ -239,8 +256,8 @@ async function step() {
       $("alert").textContent = r.safety.alert; $("alert").hidden = false;
       if (r.safety.stop) { S.stopped = true; S.history = S.history.slice(-2); renderChat(); S.card = {}; renderCard(); }
     }
-    say(r.reply);
-    if (r.ready_for_plan) await makePlan();
+    S.lastSay = say(r.reply);
+    if (r.ready_for_plan) { await S.lastSay; await makePlan(); }
   } catch (e) { setStatus(e.message); }
   S.busy = false; setInputs(true);
 }
@@ -250,8 +267,7 @@ async function makePlan() {
   const transcript = S.history.map(h => (h.who === "sal" ? "Sal: " : "Client: ") + h.text).join("\n");
   const p = await api("/api/plan", { card: S.card, transcript, lang: S.lang });
   S.plan = p; renderPlan(); setStatus(`Plan ready in ${(p.ms / 1000).toFixed(1)} s. A case manager should check it before the client acts.`);
-  audio.onended = null;
-  setTimeout(() => say(p.client_message), S.voice === "off" ? 0 : 400);
+  S.lastSay = say(p.client_message);
 }
 
 function renderPlan() {
@@ -278,6 +294,7 @@ function renderPlan() {
     ${c.removed_digits.length ? `<h3>Numbers Claude wrote itself (removed)</h3><p>${c.removed_digits.map(esc).join(", ")}</p>` : ""}
     ${c.missing_placeholders.length ? `<h3>Facts not on the list (replaced)</h3><p>${c.missing_placeholders.map(esc).join(", ")}</p>` : ""}`;
   $("staffPanel").hidden = false;
+  publish();
 }
 
 // ---- controls ----
@@ -295,6 +312,37 @@ $("copyPlan").onclick = async () => {
 };
 document.querySelectorAll("#langSeg button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; seg("langSeg", "lang", S.lang); document.documentElement.lang = S.lang; });
 document.querySelectorAll("#voiceSeg button").forEach(b => b.onclick = () => { S.voice = b.dataset.voice; seg("voiceSeg", "voice", S.voice); if (S.voice === "off") { audio.pause(); speechSynthesis.cancel(); } });
+
+// ---- demo autoplay: Claude plays a made-up client from the event's scenario file ----
+const CLIENT_VOICE = { C01: "rex", C02: "ara", C03: "leo", C10: "ara" };
+async function autoplay(scenario, lang) {
+  S.lang = lang; seg("langSeg", "lang", lang);
+  S.auto = (S.auto || 0) + 1; const run = S.auto;
+  await start();
+  for (let i = 0; i < 14 && run === S.auto && !S.plan && !S.stopped; i++) {
+    await S.lastSay;
+    if (run !== S.auto) return;
+    $("text").value = ""; $("text").placeholder = "The client is answering…";
+    const { text } = await api("/api/simclient", { scenario, history: S.history, lang });
+    if (run !== S.auto) return;
+    $("text").value = text;
+    await say(text, CLIENT_VOICE[scenario] || "rex");
+    if (run !== S.auto) return;
+    await send();
+  }
+  $("text").placeholder = "Or type an answer";
+}
+window.addEventListener("message", e => { if (e.origin === location.origin && e.data?.type === "autoplay") autoplay(e.data.scenario, e.data.lang); if (e.data?.type === "voice") { S.voice = e.data.voice; seg("voiceSeg", "voice", S.voice); } if (e.data?.type === "stop") { S.auto++; audio.pause(); speechSynthesis.cancel(); } });
+
+if (VIEW === "staff") {
+  $("chat").innerHTML = `<p class="empty">Waiting for the client's tablet.</p>`;
+  channel && (channel.onmessage = e => {
+    const d = e.data; S.history = d.history; S.card = d.card; S.plan = d.plan; S.lang = d.lang;
+    renderChat(); renderCard();
+    if (d.alert) { $("alert").textContent = d.alert; $("alert").hidden = false; } else $("alert").hidden = true;
+    if (d.plan) renderPlan(); else { $("planPanel").hidden = true; $("staffPanel").hidden = true; }
+  });
+}
 
 fetch("/api/status").then(r => r.json()).then(k => {
   S.keys = k;

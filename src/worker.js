@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import seed from "../challenges/2-finding-the-right-resource/data/oc-resources.seed.json";
 import added from "../data/added.json";
 import staff from "../data/ihh-staff.json";
+import scenarios from "../challenges/2-finding-the-right-resource/scenarios/client-scenarios.json";
 import { checkSafety, safetyReply } from "./safety.js";
 import { checkPlan, readingGrade } from "./check.js";
 import { GREETING, INTERVIEW_SYSTEM, TURN_SCHEMA, planSystem, PLAN_SCHEMA } from "./prompts.js";
@@ -83,15 +84,35 @@ async function plan(req, env) {
 // POST /api/speak  { text, lang }  → audio/mpeg in Grok's Lumen voice
 async function speak(req, env) {
   if (!env.XAI_API_KEY) return json({ error: "No Grok key. Add XAI_API_KEY to .dev.vars to use the Lumen voice." }, 503);
-  const { text = "", lang = "en" } = await req.json();
+  const { text = "", lang = "en", voice = "lumen" } = await req.json();
+  const voice_id = ["lumen", "rex", "ara", "leo", "eve"].includes(voice) ? voice : "lumen";
   const r = await fetch("https://api.x.ai/v1/tts", {
     method: "POST",
     headers: { authorization: `Bearer ${env.XAI_API_KEY}`, "content-type": "application/json" },
-    body: JSON.stringify({ text: text.slice(0, 2000), voice_id: "lumen", language: lang.startsWith("es") ? "es-MX" : "en-US",
+    body: JSON.stringify({ text: text.slice(0, 2000), voice_id, language: lang.startsWith("es") ? "es-MX" : "en-US",
       output_format: { codec: "mp3", sample_rate: 24000 } }),
   });
   if (!r.ok) return json({ error: `Grok voice returned ${r.status}` }, 502);
   return new Response(r.body, { headers: { "content-type": "audio/mpeg", "cache-control": "no-store" } });
+}
+
+// POST /api/simclient  { scenario, history, lang }  → the next line from a made-up client (demo only)
+async function simclient(req, env) {
+  const { scenario = "C01", history = [], lang = "en" } = await req.json();
+  const sc = scenarios.scenarios.find(s => s.id === scenario);
+  if (!sc) return json({ error: "Unknown scenario" }, 400);
+  if (!history.some(h => h.who === "client")) return json({ text: sc.in_their_words });
+  const res = await claude(env).messages.create({
+    model: "claude-haiku-5-5",
+    max_tokens: 400,
+    output_config: { effort: "low" },
+    system: `You are role-playing a made-up person to demo a helper app called Sal. Stay in character. Nothing here is a real person.
+Character: ${sc.client}
+Constraints: ${sc.constraints.join("; ") || "none"}
+Speak ${lang.startsWith("es") ? "Spanish" : "English"}, the way this person talks out loud. Answer Sal's question in one or two short sentences. Don't volunteer everything at once. If Sal reads back a summary that is right, say yes. Reply with only your words.`,
+    messages: history.map(h => ({ role: h.who === "sal" ? "user" : "assistant", content: h.text })),
+  });
+  return json({ text: res.content.find(b => b.type === "text")?.text.trim() || "Okay." });
 }
 
 export default {
@@ -101,6 +122,7 @@ export default {
       if (req.method === "POST" && pathname === "/api/turn") return await turn(req, env);
       if (req.method === "POST" && pathname === "/api/plan") return await plan(req, env);
       if (req.method === "POST" && pathname === "/api/speak") return await speak(req, env);
+      if (req.method === "POST" && pathname === "/api/simclient") return await simclient(req, env);
       if (pathname === "/api/status") return json({ claude: !!env.ANTHROPIC_API_KEY, grok: !!env.XAI_API_KEY, resources: RESOURCES.length });
       return env.ASSETS.fetch(req);
     } catch (e) {
